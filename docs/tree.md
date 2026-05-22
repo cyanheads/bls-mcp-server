@@ -1,6 +1,6 @@
 # bls-mcp-server - Directory Structure
 
-Generated on: 2026-05-22 03:31:06
+Generated on: 2026-05-22 06:40:05
 
 ```text
 bls-mcp-server/
@@ -28,6 +28,7 @@ bls-mcp-server/
 │   ├── clean.ts
 │   ├── devcheck.ts
 │   ├── lint-mcp.ts
+│   ├── list-skills.ts
 │   ├── split-changelog.ts
 │   └── tree.ts
 ├── skills/
@@ -101,6 +102,8 @@ bls-mcp-server/
 │   └── tool-defs-analysis/
 │       └── SKILL.md
 ├── src/
+│   ├── config/
+│   │   └── server-config.ts
 │   ├── mcp-server/
 │   │   ├── prompts/
 │   │   │   └── definitions/
@@ -108,22 +111,51 @@ bls-mcp-server/
 │   │   │   └── definitions/
 │   │   └── tools/
 │   │       └── definitions/
-│   │           └── echo.tool.ts
+│   │           ├── bls-dataframe-describe.tool.ts
+│   │           ├── bls-dataframe-drop.tool.ts
+│   │           ├── bls-dataframe-query.tool.ts
+│   │           ├── bls-get-latest.tool.ts
+│   │           ├── bls-get-series.tool.ts
+│   │           ├── bls-list-surveys.tool.ts
+│   │           └── bls-search-series.tool.ts
+│   ├── services/
+│   │   ├── bls-api/
+│   │   │   ├── bls-api-service.ts
+│   │   │   └── types.ts
+│   │   ├── bls-catalog/
+│   │   │   ├── bls-catalog-service.ts
+│   │   │   └── types.ts
+│   │   └── canvas-bridge/
+│   │       ├── canvas-bridge.ts
+│   │       └── sql-gate-extras.ts
 │   └── index.ts
 ├── tests/
 │   ├── prompts/
 │   ├── resources/
+│   ├── services/
+│   │   ├── bls-api/
+│   │   │   └── bls-api-service.test.ts
+│   │   └── bls-catalog/
+│   │       └── bls-catalog-service.test.ts
 │   └── tools/
-│       └── echo.tool.test.ts
+│       ├── bls-dataframe-describe.tool.test.ts
+│       ├── bls-dataframe-drop.tool.test.ts
+│       ├── bls-dataframe-query.tool.test.ts
+│       ├── bls-get-latest.tool.test.ts
+│       ├── bls-get-series.tool.test.ts
+│       ├── bls-list-surveys.tool.test.ts
+│       └── bls-search-series.tool.test.ts
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
 ├── biome.json
 ├── bun.lock
+├── CHANGELOG.md
 ├── CLAUDE.md
 ├── devcheck.config.json
 ├── Dockerfile
 ├── package.json
+├── README.md
 ├── server.json
 ├── tsconfig.build.json
 ├── tsconfig.json

@@ -1,0 +1,321 @@
+/**
+ * @fileoverview Fetch time-series data for 1–50 BLS series by SeriesID. Sends
+ * a single POST /timeseries/data request (one API query regardless of series
+ * count). When total observations exceed the inline budget, spills to canvas
+ * and returns a `dataset` field with a `df_<id>` handle for follow-up SQL.
+ * @module mcp-server/tools/definitions/bls-get-series
+ */
+
+import { tool, z } from '@cyanheads/mcp-ts-core';
+import { JsonRpcErrorCode } from '@cyanheads/mcp-ts-core/errors';
+import { type BatchFetchOptions, getBlsApiService } from '@/services/bls-api/bls-api-service.js';
+import type { SeriesData } from '@/services/bls-api/types.js';
+import { getCanvasBridge, toDatasetField } from '@/services/canvas-bridge/canvas-bridge.js';
+
+/** Inline budget in characters of JSON. ~25k tokens ≈ 100,000 chars. */
+const INLINE_BUDGET_CHARS = 100_000;
+
+const ObservationSchema = z.object({
+  year: z.string().describe('Observation year.'),
+  period: z.string().describe('Period code (e.g. M01–M13, Q01–Q05, A01).'),
+  periodName: z.string().optional().describe('Human-readable period name.'),
+  value: z
+    .string()
+    .describe('Observation value as a string matching BLS output. Parse to float for arithmetic.'),
+  footnotes: z.array(z.string()).optional().describe('Footnote codes and text, when present.'),
+  netChange1Month: z.string().optional().describe('1-month net change (when calculations=true).'),
+  netChange12Month: z.string().optional().describe('12-month net change (when calculations=true).'),
+  pctChange1Month: z
+    .string()
+    .optional()
+    .describe('1-month percent change (when calculations=true).'),
+  pctChange12Month: z
+    .string()
+    .optional()
+    .describe('12-month percent change (when calculations=true).'),
+});
+
+export const blsGetSeriesTool = tool('bls_get_series', {
+  title: 'Get BLS Time-Series Data',
+  description:
+    'Fetch time-series data for 1–50 BLS series by SeriesID in a single API request (one query against the 500/day limit). Supports optional year range (up to 20 years per request) and BLS-computed period-over-period calculations (net change + percent change together — not individually; not all surveys support it, check bls_list_surveys first). When the total observation count would exceed the inline context budget, results spill to a canvas dataframe and the response includes a dataset.name handle for follow-up SQL via bls_dataframe_query. Use bls_search_series first if you need to resolve a concept to a SeriesID.',
+  annotations: { readOnlyHint: true, openWorldHint: true },
+
+  errors: [
+    {
+      reason: 'quota_exceeded',
+      code: JsonRpcErrorCode.ServiceUnavailable,
+      when: 'The BLS API 500 query/day limit has been reached.',
+      recovery:
+        'The daily quota resets at UTC midnight. Retry after midnight or reduce query volume.',
+    },
+    {
+      reason: 'series_not_found',
+      code: JsonRpcErrorCode.InvalidParams,
+      when: 'One or more SeriesIDs do not exist in BLS data.',
+      recovery: 'Use bls_search_series to find valid SeriesIDs before calling bls_get_series.',
+    },
+    {
+      reason: 'series_locked',
+      code: JsonRpcErrorCode.ServiceUnavailable,
+      when: 'The BLS database is temporarily locked for the requested series.',
+      recovery: 'The BLS database lock is transient — retry the request after a brief delay.',
+    },
+    {
+      reason: 'no_data_for_period',
+      code: JsonRpcErrorCode.InvalidParams,
+      when: 'No data is available for the requested year range.',
+      recovery: 'Adjust start_year or end_year. The BLS series may not cover the requested period.',
+    },
+    {
+      reason: 'calculations_not_supported',
+      code: JsonRpcErrorCode.InvalidParams,
+      when: 'calculations=true was requested for a survey that does not support it.',
+      recovery:
+        'Remove the calculations flag or use bls_list_surveys to verify calculation support before requesting it.',
+    },
+  ],
+
+  input: z.object({
+    series_ids: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(50)
+      .describe(
+        'One or more BLS SeriesIDs (1–50). The entire batch counts as one API query. Use bls_search_series to resolve concepts to SeriesIDs.',
+      ),
+    start_year: z
+      .number()
+      .int()
+      .min(1900)
+      .max(2100)
+      .optional()
+      .describe(
+        'Start year for the data range (inclusive). The BLS API allows up to 20 years per request. Omit for the API default (typically 3–20 years depending on survey).',
+      ),
+    end_year: z
+      .number()
+      .int()
+      .min(1900)
+      .max(2100)
+      .optional()
+      .describe(
+        'End year for the data range (inclusive). Defaults to the current year when omitted.',
+      ),
+    calculations: z
+      .boolean()
+      .optional()
+      .describe(
+        'When true, request BLS-computed net change and percent change together (cannot request one independently). Not all surveys support this — check bls_list_surveys first. The API returns an error if requested for an unsupported survey.',
+      ),
+  }),
+
+  output: z.object({
+    series: z
+      .array(
+        z
+          .object({
+            seriesId: z.string().describe('BLS SeriesID.'),
+            title: z.string().optional().describe('Series name when returned by the API.'),
+            area: z.string().optional().describe('Geographic area when returned by the API.'),
+            item: z.string().optional().describe('Item/subject when returned by the API.'),
+            seasonal: z
+              .string()
+              .optional()
+              .describe('Seasonality indicator when returned by the API.'),
+            observationCount: z
+              .number()
+              .describe(
+                'Total observations for this series. When spilled to canvas, all observations are on the dataframe; inline only shows a preview.',
+              ),
+            observations: z
+              .array(ObservationSchema.describe('One observation data point.'))
+              .describe(
+                'Inline observations. All observations when no spillover; preview rows when spilled to canvas.',
+              ),
+          })
+          .describe('Time-series data for one BLS series.'),
+      )
+      .describe('Series data, in request order.'),
+    dataset: z
+      .object({
+        name: z
+          .string()
+          .describe('Canvas table name (df_XXXXX_XXXXX). Pass to bls_dataframe_query.'),
+        row_count: z.number().describe('Total rows in the canvas table.'),
+        expires_at: z.string().describe('ISO 8601 expiry timestamp (sliding 24h window).'),
+        truncated: z
+          .boolean()
+          .describe(
+            'True when the upstream response had more rows than the canvas materialization cap.',
+          ),
+      })
+      .optional()
+      .describe(
+        'Canvas dataframe handle — present when the observation volume exceeded the inline budget. Use bls_dataframe_query with dataset.name to run SQL across the full data.',
+      ),
+    spilled: z
+      .boolean()
+      .describe('True when results spilled to canvas due to inline budget overflow.'),
+  }),
+
+  async handler(input, ctx) {
+    ctx.log.info('Executing bls_get_series', {
+      count: input.series_ids.length,
+      startYear: input.start_year,
+      endYear: input.end_year,
+      calculations: input.calculations,
+    });
+
+    const service = getBlsApiService();
+    const fetchOptions: BatchFetchOptions = { seriesIds: input.series_ids };
+    if (input.start_year !== undefined) fetchOptions.startYear = input.start_year;
+    if (input.end_year !== undefined) fetchOptions.endYear = input.end_year;
+    if (input.calculations !== undefined) fetchOptions.calculations = input.calculations;
+    const allSeries = await service.fetchSeries(fetchOptions, ctx);
+
+    // Flatten to rows for canvas registration
+    const allRows = flattenToRows(allSeries);
+    const inlineJson = JSON.stringify(allRows);
+    const shouldSpill = inlineJson.length > INLINE_BUDGET_CHARS;
+
+    if (shouldSpill) {
+      const bridge = getCanvasBridge();
+      let dataset:
+        | { name: string; row_count: number; expires_at: string; truncated: boolean }
+        | undefined;
+
+      if (bridge) {
+        const registered = await bridge.registerDataframe(ctx, {
+          rows: allRows,
+          sourceTool: 'bls_get_series',
+          queryParams: {
+            series_ids: input.series_ids,
+            start_year: input.start_year,
+            end_year: input.end_year,
+            calculations: input.calculations,
+          },
+        });
+        if (registered) {
+          dataset = {
+            ...toDatasetField(registered),
+            truncated: false,
+          };
+        }
+      }
+
+      // Still return preview rows inline — first 3 observations per series
+      const seriesPreview = allSeries.map((s) => ({
+        seriesId: s.seriesId,
+        ...(s.title && { title: s.title }),
+        ...(s.area && { area: s.area }),
+        ...(s.item && { item: s.item }),
+        ...(s.seasonal && { seasonal: s.seasonal }),
+        observationCount: s.observations.length,
+        observations: s.observations.slice(0, 3).map(normalizeObs),
+      }));
+      return {
+        series: seriesPreview,
+        ...(dataset !== undefined && { dataset }),
+        spilled: true as const,
+      };
+    }
+
+    const result = {
+      series: allSeries.map((s) => ({
+        seriesId: s.seriesId,
+        ...(s.title && { title: s.title }),
+        ...(s.area && { area: s.area }),
+        ...(s.item && { item: s.item }),
+        ...(s.seasonal && { seasonal: s.seasonal }),
+        observationCount: s.observations.length,
+        observations: s.observations.map(normalizeObs),
+      })),
+      spilled: false as const,
+    };
+    return result;
+  },
+
+  format: (result) => {
+    const lines: string[] = [];
+
+    if (result.spilled && result.dataset) {
+      const ds = result.dataset;
+      lines.push(
+        `**Spilled to canvas** — ${ds.row_count} total rows in \`${ds.name}\`${ds.truncated ? ' (truncated)' : ''}.`,
+      );
+      lines.push(`Use \`bls_dataframe_query\` with table \`${ds.name}\` for full SQL access.`);
+      lines.push(`Expires: ${ds.expires_at}\n`);
+    }
+
+    for (const s of result.series) {
+      lines.push(`### ${s.seriesId}${s.title ? ` — ${s.title}` : ''}`);
+      if (s.area) lines.push(`Area: ${s.area}`);
+      if (s.item) lines.push(`Item: ${s.item}`);
+      if (s.seasonal) lines.push(`Seasonality: ${s.seasonal}`);
+      lines.push(`Observations: ${s.observationCount}${result.spilled ? ' (preview below)' : ''}`);
+      lines.push('');
+      if (s.observations.length > 0) {
+        lines.push('| Period | Code | Value | Net 1M | Net 12M | Pct 1M | Pct 12M | Notes |');
+        lines.push('| --- | --- | --- | --- | --- | --- | --- | --- |');
+        for (const obs of s.observations) {
+          const periodLabel = obs.periodName ? `${obs.periodName} ${obs.year}` : `${obs.year}`;
+          const notes = obs.footnotes?.join('; ') ?? '';
+          lines.push(
+            `| ${periodLabel} | ${obs.period} | ${obs.value} | ${obs.netChange1Month ?? ''} | ${obs.netChange12Month ?? ''} | ${obs.pctChange1Month ?? ''} | ${obs.pctChange12Month ?? ''} | ${notes} |`,
+          );
+        }
+      } else {
+        lines.push('_No observations returned for this series._');
+      }
+      lines.push('');
+    }
+
+    if (result.spilled && !result.dataset) {
+      lines.push(
+        '_Results exceeded inline budget but canvas is not enabled (CANVAS_PROVIDER_TYPE=duckdb required for full data)._',
+      );
+    }
+
+    return [{ type: 'text', text: lines.join('\n').trimEnd() }];
+  },
+});
+
+function flattenToRows(series: SeriesData[]): Record<string, unknown>[] {
+  const rows: Record<string, unknown>[] = [];
+  for (const s of series) {
+    for (const obs of s.observations) {
+      rows.push({
+        series_id: s.seriesId,
+        series_title: s.title ?? null,
+        area: s.area ?? null,
+        item: s.item ?? null,
+        seasonal: s.seasonal ?? null,
+        year: obs.year,
+        period: obs.period,
+        period_name: obs.periodName ?? null,
+        value: obs.value,
+        footnotes: obs.footnotes?.join('; ') ?? null,
+        net_change_1m: obs.netChange1Month ?? null,
+        net_change_12m: obs.netChange12Month ?? null,
+        pct_change_1m: obs.pctChange1Month ?? null,
+        pct_change_12m: obs.pctChange12Month ?? null,
+      });
+    }
+  }
+  return rows;
+}
+
+function normalizeObs(obs: SeriesData['observations'][number]) {
+  return {
+    year: obs.year,
+    period: obs.period,
+    value: obs.value,
+    ...(obs.periodName && { periodName: obs.periodName }),
+    ...(obs.footnotes?.length && { footnotes: obs.footnotes }),
+    ...(obs.netChange1Month && { netChange1Month: obs.netChange1Month }),
+    ...(obs.netChange12Month && { netChange12Month: obs.netChange12Month }),
+    ...(obs.pctChange1Month && { pctChange1Month: obs.pctChange1Month }),
+    ...(obs.pctChange12Month && { pctChange12Month: obs.pctChange12Month }),
+  };
+}
