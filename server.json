@@ -1,9 +1,9 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "bls-mcp-server",
-  "description": "",
+  "name": "io.github.cyanheads/bls-mcp-server",
+  "description": "Fetch US Bureau of Labor Statistics data — CPI, unemployment, wages, JOLTS, and more via MCP. STDIO or Streamable HTTP.",
   "repository": {
-    "url": "",
+    "url": "https://github.com/cyanheads/bls-mcp-server",
     "source": "github"
   },
   "version": "0.1.0",
@@ -11,8 +11,8 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "bls-mcp-server",
-      "runtimeHint": "node",
+      "identifier": "@cyanheads/bls-mcp-server",
+      "runtimeHint": "bun",
       "version": "0.1.0",
       "packageArguments": [
         {
@@ -25,6 +25,12 @@
         }
       ],
       "environmentVariables": [
+        {
+          "name": "BLS_API_KEY",
+          "description": "BLS v2 API key. Required for v2 access (500 queries/day). Register free at bls.gov/developers.",
+          "format": "string",
+          "isRequired": true
+        },
         {
           "name": "MCP_LOG_LEVEL",
           "description": "Sets the minimum log level for output (e.g., 'debug', 'info', 'warn').",
@@ -40,8 +46,8 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "bls-mcp-server",
-      "runtimeHint": "node",
+      "identifier": "@cyanheads/bls-mcp-server",
+      "runtimeHint": "bun",
       "version": "0.1.0",
       "packageArguments": [
         {
@@ -54,6 +60,12 @@
         }
       ],
       "environmentVariables": [
+        {
+          "name": "BLS_API_KEY",
+          "description": "BLS v2 API key. Required for v2 access (500 queries/day). Register free at bls.gov/developers.",
+          "format": "string",
+          "isRequired": true
+        },
         {
           "name": "MCP_HTTP_HOST",
           "description": "The hostname for the HTTP server.",
