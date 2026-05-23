@@ -51,7 +51,7 @@ export const blsGetSeriesTool = tool('bls_get_series', {
     },
     {
       reason: 'series_not_found',
-      code: JsonRpcErrorCode.InvalidParams,
+      code: JsonRpcErrorCode.NotFound,
       when: 'One or more SeriesIDs do not exist in BLS data.',
       recovery: 'Use bls_search_series to find valid SeriesIDs before calling bls_get_series.',
     },
@@ -63,13 +63,13 @@ export const blsGetSeriesTool = tool('bls_get_series', {
     },
     {
       reason: 'no_data_for_period',
-      code: JsonRpcErrorCode.InvalidParams,
+      code: JsonRpcErrorCode.ValidationError,
       when: 'No data is available for the requested year range.',
       recovery: 'Adjust start_year or end_year. The BLS series may not cover the requested period.',
     },
     {
       reason: 'calculations_not_supported',
-      code: JsonRpcErrorCode.InvalidParams,
+      code: JsonRpcErrorCode.ValidationError,
       when: 'calculations=true was requested for a survey that does not support it.',
       recovery:
         'Remove the calculations flag or use bls_list_surveys to verify calculation support before requesting it.',

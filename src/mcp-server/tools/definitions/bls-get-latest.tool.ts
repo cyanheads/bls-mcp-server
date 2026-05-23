@@ -38,7 +38,7 @@ export const blsGetLatestTool = tool('bls_get_latest', {
     },
     {
       reason: 'series_not_found',
-      code: JsonRpcErrorCode.InvalidParams,
+      code: JsonRpcErrorCode.NotFound,
       when: 'One or more SeriesIDs do not exist in BLS data.',
       recovery: 'Use bls_search_series to find valid SeriesIDs before calling bls_get_latest.',
     },

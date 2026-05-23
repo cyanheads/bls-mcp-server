@@ -79,7 +79,7 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
     total: z.number().describe('Total matches in the catalog before the limit was applied.'),
   }),
 
-  async handler(input, ctx) {
+  handler(input, ctx) {
     ctx.log.info('Executing bls_search_series', {
       query: input.query,
       survey: input.survey,

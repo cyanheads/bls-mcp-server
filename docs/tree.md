@@ -1,6 +1,6 @@
 # bls-mcp-server - Directory Structure
 
-Generated on: 2026-05-22 06:40:05
+Generated on: 2026-05-23 09:08:18
 
 ```text
 bls-mcp-server/
@@ -28,6 +28,7 @@ bls-mcp-server/
 │   ├── clean.ts
 │   ├── devcheck.ts
 │   ├── lint-mcp.ts
+│   ├── lint-packaging.ts
 │   ├── list-skills.ts
 │   ├── split-changelog.ts
 │   └── tree.ts
@@ -148,12 +149,14 @@ bls-mcp-server/
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
+├── .mcpbignore
 ├── biome.json
 ├── bun.lock
 ├── CHANGELOG.md
 ├── CLAUDE.md
 ├── devcheck.config.json
 ├── Dockerfile
+├── manifest.json
 ├── package.json
 ├── README.md
 ├── server.json

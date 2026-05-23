@@ -11,9 +11,10 @@
 import type { Context } from '@cyanheads/mcp-ts-core';
 import type { AppConfig } from '@cyanheads/mcp-ts-core/config';
 import {
-  invalidParams,
+  notFound,
   serializationError,
   serviceUnavailable,
+  validationError,
 } from '@cyanheads/mcp-ts-core/errors';
 import { withRetry } from '@cyanheads/mcp-ts-core/utils';
 import { getServerConfig } from '@/config/server-config.js';
@@ -87,7 +88,7 @@ export class BlsApiService {
         const series = this.parseSeriesResponse(text, { seriesIds: [seriesId] });
         const found = series.find((s) => s.seriesId === seriesId);
         if (!found) {
-          throw invalidParams(`Series not found: ${seriesId}`, {
+          throw notFound(`Series not found: ${seriesId}`, {
             reason: 'series_not_found',
             seriesId,
           });
@@ -181,7 +182,7 @@ export class BlsApiService {
         });
       }
       if (/does not exist/i.test(msg)) {
-        throw invalidParams(`BLS API: ${msg} — use bls_search_series to find valid SeriesIDs.`, {
+        throw notFound(`BLS API: ${msg} — use bls_search_series to find valid SeriesIDs.`, {
           reason: 'series_not_found',
           messages,
           seriesIds: options.seriesIds,
@@ -194,13 +195,13 @@ export class BlsApiService {
         });
       }
       if (/no data available/i.test(msg)) {
-        throw invalidParams('BLS API: No data available for the requested period range.', {
+        throw validationError('BLS API: No data available for the requested period range.', {
           reason: 'no_data_for_period',
           messages,
         });
       }
       if (/calculations.*not supported|does not support.*calculations/i.test(msg)) {
-        throw invalidParams(
+        throw validationError(
           'This survey does not support calculations — remove the calculations flag or check bls_list_surveys.',
           { reason: 'calculations_not_supported', messages },
         );

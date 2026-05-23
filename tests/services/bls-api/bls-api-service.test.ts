@@ -76,7 +76,7 @@ describe('BlsApiService.fetchSeries', () => {
     });
   });
 
-  it('throws invalidParams on series_not_found message', async () => {
+  it('throws notFound on series_not_found message', async () => {
     const notFoundResponse = {
       status: 'REQUEST_FAILED_ERROR',
       responseTime: 10,

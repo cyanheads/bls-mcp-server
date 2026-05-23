@@ -30,22 +30,22 @@ vi.mock('@/services/bls-catalog/bls-catalog-service.js', () => ({
 }));
 
 describe('blsSearchSeriesTool', () => {
-  it('throws catalog_unavailable when catalog is not loaded', async () => {
+  it('throws catalog_unavailable when catalog is not loaded', () => {
     mockIsLoaded = false;
     const ctx = createMockContext({ errors: blsSearchSeriesTool.errors });
     const input = blsSearchSeriesTool.input.parse({ query: 'unemployment' });
 
-    await expect(blsSearchSeriesTool.handler(input, ctx)).rejects.toMatchObject({
-      data: { reason: 'catalog_unavailable' },
-    });
+    expect(() => blsSearchSeriesTool.handler(input, ctx)).toThrow(
+      expect.objectContaining({ data: expect.objectContaining({ reason: 'catalog_unavailable' }) }),
+    );
     mockIsLoaded = true;
   });
 
-  it('returns series from catalog on happy path', async () => {
+  it('returns series from catalog on happy path', () => {
     mockIsLoaded = true;
     const ctx = createMockContext();
     const input = blsSearchSeriesTool.input.parse({ query: 'unemployment', limit: 5 });
-    const result = await blsSearchSeriesTool.handler(input, ctx);
+    const result = blsSearchSeriesTool.handler(input, ctx);
 
     expect(result.series).toHaveLength(1);
     expect(result.series[0]!.seriesId).toBe('LNS14000000');
