@@ -1,6 +1,6 @@
 # bls-mcp-server - Directory Structure
 
-Generated on: 2026-05-23 09:08:18
+Generated on: 2026-05-23 10:50:00
 
 ```text
 bls-mcp-server/
@@ -156,6 +156,7 @@ bls-mcp-server/
 ├── CLAUDE.md
 ├── devcheck.config.json
 ├── Dockerfile
+├── LICENSE
 ├── manifest.json
 ├── package.json
 ├── README.md
