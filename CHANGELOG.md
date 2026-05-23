@@ -2,6 +2,10 @@
 
 All notable changes to this project. Each entry links to its full per-version file in [changelog/](changelog/).
 
+## [0.1.6](changelog/0.1.x/0.1.6.md) — 2026-05-23
+
+Field-test bug fixes: error contracts, catalog handling, survey metadata, and formatting across BLS tools.
+
 ## [0.1.5](changelog/0.1.x/0.1.5.md) — 2026-05-23
 
 Pre-launch polish: code simplification across services and tools, README expanded with full tool docs and Docker section, Dockerfile OCI labels filled, .env.example populated, bunfig.toml added, GitHub topics synced.

@@ -51,7 +51,7 @@ const SURVEY_CAPABILITIES: Record<
   IP: { allowsNetChange: true, allowsPercentChange: true, hasAnnualAverages: true },
   JT: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: false },
   LA: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: true },
-  LN: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: true },
+  LN: { allowsNetChange: true, allowsPercentChange: true, hasAnnualAverages: true },
   MP: { allowsNetChange: true, allowsPercentChange: true, hasAnnualAverages: true },
   NW: { allowsNetChange: false, allowsPercentChange: true, hasAnnualAverages: false },
   OE: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: false },
@@ -116,7 +116,7 @@ export class BlsApiService {
   fetchLatest(seriesId: string, ctx: Context): Promise<SeriesData> {
     return withRetry(
       async () => {
-        const url = `${this.baseUrl}/timeseries/data/${encodeURIComponent(seriesId)}?latest=true&registrationkey=${this.apiKey}`;
+        const url = `${this.baseUrl}/timeseries/data/${encodeURIComponent(seriesId)}?latest=true&catalog=true&registrationkey=${this.apiKey}`;
         const response = await fetch(url, { signal: ctx.signal });
         const text = await response.text();
         const series = this.parseSeriesResponse(text, { seriesIds: [seriesId] });

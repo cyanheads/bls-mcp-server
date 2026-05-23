@@ -175,6 +175,19 @@ export const blsGetSeriesTool = tool('bls_get_series', {
       throw ctx.fail(
         'no_data_for_period',
         `start_year (${input.start_year}) must not be greater than end_year (${input.end_year}).`,
+        { ...ctx.recoveryFor('no_data_for_period') },
+      );
+    }
+
+    if (
+      input.start_year !== undefined &&
+      input.end_year !== undefined &&
+      input.end_year - input.start_year >= 20
+    ) {
+      throw ctx.fail(
+        'no_data_for_period',
+        `Year range ${input.start_year}–${input.end_year} spans ${input.end_year - input.start_year + 1} years. The BLS API caps requests at 20 years. Split into multiple requests (e.g. ${input.start_year}–${input.start_year + 19}, then ${input.start_year + 20}–${input.end_year}).`,
+        { ...ctx.recoveryFor('no_data_for_period') },
       );
     }
 
@@ -266,17 +279,32 @@ export const blsGetSeriesTool = tool('bls_get_series', {
       lines.push(`Observations: ${s.observationCount}${result.spilled ? ' (preview below)' : ''}`);
       lines.push('');
       if (s.observations.length > 0) {
-        lines.push('| Period | Code | Value | Net 1M | Net 12M | Pct 1M | Pct 12M | Notes |');
-        lines.push('| --- | --- | --- | --- | --- | --- | --- | --- |');
-        for (const obs of s.observations) {
-          const periodLabel = obs.periodName ? `${obs.periodName} ${obs.year}` : `${obs.year}`;
-          const notes = obs.footnotes?.join('; ') ?? '';
-          lines.push(
-            `| ${periodLabel} | ${obs.period} | ${obs.value} | ${obs.netChange1Month ?? ''} | ${obs.netChange12Month ?? ''} | ${obs.pctChange1Month ?? ''} | ${obs.pctChange12Month ?? ''} | ${notes} |`,
-          );
+        const hasCalcs = s.observations.some(
+          (o) => o.netChange1Month || o.netChange12Month || o.pctChange1Month || o.pctChange12Month,
+        );
+        if (hasCalcs) {
+          lines.push('| Period | Code | Value | Net 1M | Net 12M | Pct 1M | Pct 12M | Notes |');
+          lines.push('| --- | --- | --- | --- | --- | --- | --- | --- |');
+          for (const obs of s.observations) {
+            const periodLabel = obs.periodName ? `${obs.periodName} ${obs.year}` : `${obs.year}`;
+            const notes = obs.footnotes?.join('; ') ?? '';
+            lines.push(
+              `| ${periodLabel} | ${obs.period} | ${obs.value} | ${obs.netChange1Month ?? ''} | ${obs.netChange12Month ?? ''} | ${obs.pctChange1Month ?? ''} | ${obs.pctChange12Month ?? ''} | ${notes} |`,
+            );
+          }
+        } else {
+          lines.push('| Period | Code | Value | Notes |');
+          lines.push('| --- | --- | --- | --- |');
+          for (const obs of s.observations) {
+            const periodLabel = obs.periodName ? `${obs.periodName} ${obs.year}` : `${obs.year}`;
+            const notes = obs.footnotes?.join('; ') ?? '';
+            lines.push(`| ${periodLabel} | ${obs.period} | ${obs.value} | ${notes} |`);
+          }
         }
       } else {
-        lines.push('_No observations returned for this series._');
+        lines.push(
+          '_No observations returned. If this SeriesID is unverified, use `bls_search_series` to confirm it exists._',
+        );
       }
       lines.push('');
     }

@@ -25,6 +25,9 @@ vi.mock('@/services/bls-catalog/bls-catalog-service.js', () => ({
     get isLoaded() {
       return mockIsLoaded;
     },
+    get totalSeries() {
+      return mockIsLoaded ? 847000 : 0;
+    },
     search: mockSearch,
   }),
 }));
@@ -63,6 +66,7 @@ describe('blsSearchSeriesTool', () => {
         },
       ],
       total: 1,
+      catalogSize: 847000,
     };
     const blocks = blsSearchSeriesTool.format!(output);
     const text = (blocks[0] as { text: string }).text;
@@ -71,9 +75,10 @@ describe('blsSearchSeriesTool', () => {
   });
 
   it('renders no-results message when series is empty', () => {
-    const output = { series: [], total: 0 };
+    const output = { series: [], total: 0, catalogSize: 847000 };
     const blocks = blsSearchSeriesTool.format!(output);
     const text = (blocks[0] as { text: string }).text;
     expect(text).toContain('No matching series');
+    expect(text).toContain('847,000');
   });
 });

@@ -29,6 +29,7 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
     query: z
       .string()
       .min(1)
+      .refine((s) => s.trim().length > 0, { message: 'query must not be blank' })
       .describe(
         'Natural language or keyword query (e.g. "unemployment rate", "CPI food", "nonfarm payrolls"). Also accepts a SeriesID directly for exact lookup.',
       ),
@@ -77,6 +78,11 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
       )
       .describe('Matching series, ordered by relevance.'),
     total: z.number().describe('Total matches in the catalog before the limit was applied.'),
+    catalogSize: z
+      .number()
+      .describe(
+        'Total series in the loaded catalog index. Used to distinguish an empty-result search from a failed catalog load.',
+      ),
   }),
 
   handler(input, ctx) {
@@ -91,6 +97,13 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
       throw ctx.fail(
         'catalog_unavailable',
         'The BLS series catalog index has not been loaded. Server startup may have failed.',
+        { ...ctx.recoveryFor('catalog_unavailable') },
+      );
+    }
+    if (service.totalSeries === 0) {
+      throw ctx.fail(
+        'catalog_unavailable',
+        'The BLS series catalog loaded but is empty — all LABSTAT downloads failed at startup. Check BLS_CATALOG_BASE_URL and restart the server.',
         { ...ctx.recoveryFor('catalog_unavailable') },
       );
     }
@@ -113,6 +126,7 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
         seasonal: s.seasonal,
       })),
       total: result.total,
+      catalogSize: service.totalSeries,
     };
   },
 
@@ -121,12 +135,12 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
       return [
         {
           type: 'text',
-          text: `No matching series found. Total searched: ${result.total}.\n\nTry broadening the query, removing the survey/area filter, or checking spelling.`,
+          text: `No matching series found (0 of ${result.catalogSize.toLocaleString()} series searched).\n\nTry broadening the query, removing the survey/area filter, or checking spelling.`,
         },
       ];
     }
     const lines: string[] = [
-      `**${result.total} total matches** (showing ${result.series.length}):\n`,
+      `**${result.total} total matches** (showing ${result.series.length} of ${result.catalogSize.toLocaleString()} indexed series):\n`,
     ];
     for (const s of result.series) {
       const parts: string[] = [`**${s.seriesId}**`];

@@ -7,7 +7,7 @@
  */
 
 import { tool, z } from '@cyanheads/mcp-ts-core';
-import { JsonRpcErrorCode } from '@cyanheads/mcp-ts-core/errors';
+import { JsonRpcErrorCode, McpError } from '@cyanheads/mcp-ts-core/errors';
 import { getBlsApiService } from '@/services/bls-api/bls-api-service.js';
 
 const ObservationSchema = z.object({
@@ -140,6 +140,11 @@ export const blsGetLatestTool = tool('bls_get_latest', {
           },
         });
       } catch (err) {
+        // Rethrow request-level failures — quota and lock affect all series, not just this one.
+        if (err instanceof McpError) {
+          const reason = (err.data as Record<string, unknown> | undefined)?.reason;
+          if (reason === 'quota_exceeded' || reason === 'series_locked') throw err;
+        }
         failed.push({
           seriesId,
           error: err instanceof Error ? err.message : String(err),

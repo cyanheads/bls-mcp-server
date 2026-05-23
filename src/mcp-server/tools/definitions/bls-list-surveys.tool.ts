@@ -10,8 +10,8 @@ import { getBlsApiService } from '@/services/bls-api/bls-api-service.js';
 
 /** Survey category tags used to group BLS programs for filtering. */
 const CATEGORY_MAP: Record<string, string[]> = {
-  prices: ['CU', 'SA', 'PC', 'WP', 'AP', 'EI'],
-  employment: ['CE', 'LN', 'LA', 'SM', 'OE', 'IC', 'JT'],
+  prices: ['CU', 'PC', 'WP', 'AP', 'EI'],
+  employment: ['CE', 'LN', 'LA', 'SM', 'SA', 'OE', 'IC', 'JT'],
   wages: ['OE', 'EC', 'CI', 'NW'],
   productivity: ['PR', 'MP', 'IP', 'DI'],
   injuries: ['IS', 'IN'],
