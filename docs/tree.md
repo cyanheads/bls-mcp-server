@@ -1,6 +1,6 @@
 # bls-mcp-server - Directory Structure
 
-Generated on: 2026-05-23 14:18:05
+Generated on: 2026-05-23 14:27:57
 
 ```text
 bls-mcp-server/
@@ -150,6 +150,7 @@ bls-mcp-server/
 ├── .env.example
 ├── .gitignore
 ├── .mcpbignore
+├── AGENTS.md
 ├── biome.json
 ├── bun.lock
 ├── bunfig.toml
