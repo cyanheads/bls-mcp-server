@@ -27,8 +27,8 @@
     "BLS_API_KEY": {
       "title": "BLS API Key",
       "type": "string",
-      "description": "BLS v2 API key. Required for v2 access (500 queries/day). Register free at bls.gov/developers.",
-      "required": true
+      "description": "Optional — works without one (25 req/day). With key: 500 req/day + calculations and annual averages. Register free at bls.gov/developers.",
+      "required": false
     }
   }
 }

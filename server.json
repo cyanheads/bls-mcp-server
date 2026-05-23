@@ -27,9 +27,9 @@
       "environmentVariables": [
         {
           "name": "BLS_API_KEY",
-          "description": "BLS v2 API key. Required for v2 access (500 queries/day). Register free at bls.gov/developers.",
+          "description": "Optional — works without one (25 req/day). With key: 500 req/day + calculations and annual averages. Register free at bls.gov/developers.",
           "format": "string",
-          "isRequired": true
+          "isRequired": false
         },
         {
           "name": "MCP_LOG_LEVEL",
@@ -62,9 +62,9 @@
       "environmentVariables": [
         {
           "name": "BLS_API_KEY",
-          "description": "BLS v2 API key. Required for v2 access (500 queries/day). Register free at bls.gov/developers.",
+          "description": "Optional — works without one (25 req/day). With key: 500 req/day + calculations and annual averages. Register free at bls.gov/developers.",
           "format": "string",
-          "isRequired": true
+          "isRequired": false
         },
         {
           "name": "MCP_HTTP_HOST",

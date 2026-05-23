@@ -9,7 +9,12 @@ import { z } from '@cyanheads/mcp-ts-core';
 import { parseEnvConfig } from '@cyanheads/mcp-ts-core/config';
 
 const ServerConfigSchema = z.object({
-  apiKey: z.string().describe('BLS v2 API key (register free at bls.gov/developers)'),
+  apiKey: z
+    .string()
+    .default('')
+    .describe(
+      'BLS v2 API key — optional (25 req/day without, 500/day with). Register free at bls.gov/developers',
+    ),
   baseUrl: z
     .string()
     .url()
