@@ -53,7 +53,9 @@
     "mcp-server",
     "model-context-protocol",
     "typescript",
-    "ai-agent"
+    "bun",
+    "stdio",
+    "streamable-http"
   ],
   "repository": {
     "type": "git",
