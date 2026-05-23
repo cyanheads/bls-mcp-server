@@ -25,7 +25,7 @@ const ObservationSchema = z.object({
 export const blsGetLatestTool = tool('bls_get_latest', {
   title: 'Get Latest BLS Observation',
   description:
-    'Return the single most recent observation for one or more BLS series. Use for "what is X right now" questions — the current unemployment rate, the latest CPI reading, etc. Internally issues one GET per SeriesID (no batch-latest endpoint exists in the BLS API); each request counts against the 500 daily quota. For the current value of many series, bls_get_series with a 1-year window is more quota-efficient (one query for up to 50 series). Recommended limit: 10 series; maximum: 50.',
+    'Return the single most recent observation for one or more BLS series. Use for "what is X right now" questions — the current unemployment rate, the latest CPI reading, etc. Each series consumes one API query against the 500/day limit; for the current value of many series, bls_get_series with a 1-year window is more quota-efficient (one query for up to 50 series). Recommended limit: 10 series; maximum: 50.',
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
 
   errors: [
@@ -117,22 +117,28 @@ export const blsGetLatestTool = tool('bls_get_latest', {
       try {
         const data = await service.fetchLatest(seriesId, ctx);
         const obs = data.observations[0];
+        if (!obs) {
+          failed.push({
+            seriesId,
+            error:
+              'No observations returned — series may exist but has no data for the current period.',
+          });
+          continue;
+        }
         const entry: (typeof succeeded)[number] = {
           seriesId: data.seriesId,
           ...(data.title && { title: data.title }),
           ...(data.area && { area: data.area }),
           ...(data.item && { item: data.item }),
           ...(data.seasonal && { seasonal: data.seasonal }),
-        };
-        if (obs) {
-          entry.latestObservation = {
+          latestObservation: {
             year: obs.year,
             period: obs.period,
             value: obs.value,
             ...(obs.periodName && { periodName: obs.periodName }),
             ...(obs.footnotes?.length && { footnotes: obs.footnotes }),
-          };
-        }
+          },
+        };
         succeeded.push(entry);
       } catch (err) {
         failed.push({

@@ -264,10 +264,14 @@ export class BlsCatalogService {
 
       let score = 0;
 
-      // Area filter as a hard gate
+      // Area filter as a hard gate. Also check titleLower to cover surveys
+      // (e.g. LAUS) where areaName is not decoded from codes but the area
+      // name appears directly in the series title.
       if (areaFilter) {
         const areaMatch =
-          areaLower.includes(areaFilter) || s.seriesId.toLowerCase().includes(areaFilter);
+          areaLower.includes(areaFilter) ||
+          titleLower.includes(areaFilter) ||
+          s.seriesId.toLowerCase().includes(areaFilter);
         if (!areaMatch) continue;
         score += 5;
       }
@@ -285,8 +289,8 @@ export class BlsCatalogService {
         if (s.seriesId.toLowerCase().includes(token)) score += 3;
       }
 
-      if (isCommon) score += 8;
       if (score === 0) continue;
+      if (isCommon) score += 8;
       scored.push({ s, score });
     }
 

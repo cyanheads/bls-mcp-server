@@ -30,6 +30,39 @@ import type {
 /** In-memory survey cache TTL — 30 days. */
 const SURVEY_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
+/**
+ * Hardcoded capability flags for known surveys. The bulk `/surveys` endpoint
+ * only returns `survey_abbreviation` and `survey_name` — capability fields are
+ * only available on the per-survey `/surveys/{code}` endpoint. Fetching all
+ * ~70 surveys individually on every list call would consume significant quota
+ * and latency. This table covers the surveys most relevant to the tool surface
+ * and is merged at list time. Sourced from BLS `/surveys/{code}` responses.
+ */
+const SURVEY_CAPABILITIES: Record<
+  string,
+  { allowsNetChange: boolean; allowsPercentChange: boolean; hasAnnualAverages: boolean }
+> = {
+  AP: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: false },
+  CE: { allowsNetChange: true, allowsPercentChange: true, hasAnnualAverages: true },
+  CI: { allowsNetChange: false, allowsPercentChange: true, hasAnnualAverages: true },
+  CU: { allowsNetChange: false, allowsPercentChange: true, hasAnnualAverages: true },
+  EC: { allowsNetChange: false, allowsPercentChange: true, hasAnnualAverages: false },
+  EI: { allowsNetChange: false, allowsPercentChange: true, hasAnnualAverages: false },
+  IP: { allowsNetChange: true, allowsPercentChange: true, hasAnnualAverages: true },
+  JT: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: false },
+  LA: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: true },
+  LN: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: true },
+  MP: { allowsNetChange: true, allowsPercentChange: true, hasAnnualAverages: true },
+  NW: { allowsNetChange: false, allowsPercentChange: true, hasAnnualAverages: false },
+  OE: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: false },
+  PC: { allowsNetChange: false, allowsPercentChange: true, hasAnnualAverages: false },
+  PR: { allowsNetChange: true, allowsPercentChange: true, hasAnnualAverages: true },
+  SA: { allowsNetChange: false, allowsPercentChange: true, hasAnnualAverages: false },
+  SM: { allowsNetChange: true, allowsPercentChange: true, hasAnnualAverages: true },
+  TU: { allowsNetChange: false, allowsPercentChange: false, hasAnnualAverages: false },
+  WP: { allowsNetChange: false, allowsPercentChange: true, hasAnnualAverages: false },
+};
+
 export interface BatchFetchOptions {
   calculations?: boolean;
   endYear?: number;
@@ -54,6 +87,7 @@ export class BlsApiService {
         const body: Record<string, unknown> = {
           seriesid: options.seriesIds,
           registrationkey: this.apiKey,
+          catalog: true,
         };
         if (options.startYear !== undefined) body.startyear = String(options.startYear);
         if (options.endYear !== undefined) body.endyear = String(options.endYear);
@@ -134,15 +168,20 @@ export class BlsApiService {
             `BLS surveys API: ${parsed.message?.join('; ') ?? 'unknown error'}`,
           );
         }
-        return (parsed.Results?.survey ?? []).map(
-          (s): SurveyMeta => ({
+        return (parsed.Results?.survey ?? []).map((s): SurveyMeta => {
+          const abbr = s.survey_abbreviation.toUpperCase();
+          const caps = SURVEY_CAPABILITIES[abbr];
+          return {
             surveyAbbreviation: s.survey_abbreviation,
             surveyName: s.survey_name,
-            allowsNetChange: s.allowsNetChange === 'true',
-            allowsPercentChange: s.allowsPercentChange === 'true',
-            hasAnnualAverages: s.hasAnnualAverages === 'true',
-          }),
-        );
+            // Bulk endpoint omits capability flags; merge from hardcoded table.
+            // Per-survey endpoint has them but fetching ~70 surveys individually
+            // wastes quota. Fall back to false for surveys not in the table.
+            allowsNetChange: caps?.allowsNetChange ?? s.allowsNetChange === 'true',
+            allowsPercentChange: caps?.allowsPercentChange ?? s.allowsPercentChange === 'true',
+            hasAnnualAverages: caps?.hasAnnualAverages ?? s.hasAnnualAverages === 'true',
+          };
+        });
       },
       {
         operation: 'BlsApiService.listSurveys',

@@ -167,6 +167,17 @@ export const blsGetSeriesTool = tool('bls_get_series', {
       calculations: input.calculations,
     });
 
+    if (
+      input.start_year !== undefined &&
+      input.end_year !== undefined &&
+      input.start_year > input.end_year
+    ) {
+      throw ctx.fail(
+        'no_data_for_period',
+        `start_year (${input.start_year}) must not be greater than end_year (${input.end_year}).`,
+      );
+    }
+
     const service = getBlsApiService();
     const fetchOptions: BatchFetchOptions = { seriesIds: input.series_ids };
     if (input.start_year !== undefined) fetchOptions.startYear = input.start_year;

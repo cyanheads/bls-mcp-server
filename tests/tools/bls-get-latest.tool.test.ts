@@ -50,7 +50,7 @@ describe('blsGetLatestTool', () => {
     expect(result.failed[0]!.error).toContain('series_not_found');
   });
 
-  it('handles sparse upstream payload — no observations', async () => {
+  it('handles sparse upstream payload — no observations goes to failed', async () => {
     const sparse: SeriesData = { seriesId: 'LNS14000000', observations: [] };
     fetchLatestMock.mockResolvedValue(sparse);
 
@@ -58,8 +58,10 @@ describe('blsGetLatestTool', () => {
     const input = blsGetLatestTool.input.parse({ series_ids: ['LNS14000000'] });
     const result = await blsGetLatestTool.handler(input, ctx);
 
-    expect(result.succeeded).toBe(1);
-    expect(result.results[0]!.latestObservation).toBeUndefined();
+    expect(result.succeeded).toBe(0);
+    expect(result.failed).toHaveLength(1);
+    expect(result.failed[0]!.seriesId).toBe('LNS14000000');
+    expect(result.failed[0]!.error).toContain('No observations returned');
   });
 
   it('formats output with period code and item fields', () => {
