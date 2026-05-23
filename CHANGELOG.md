@@ -2,6 +2,10 @@
 
 All notable changes to this project. Each entry links to its full per-version file in [changelog/](changelog/).
 
+## [0.1.7](changelog/0.1.x/0.1.7.md) — 2026-05-23
+
+Add `@duckdb/node-api ^1.5.3-r.1` — enables the DuckDB canvas provider for `bls_dataframe_describe`, `bls_dataframe_query`, and `bls_dataframe_drop`.
+
 ## [0.1.6](changelog/0.1.x/0.1.6.md) — 2026-05-23
 
 Field-test bug fixes: error contracts, catalog handling, survey metadata, and formatting across BLS tools.
