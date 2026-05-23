@@ -273,28 +273,23 @@ export class BlsApiService {
   }
 
   private normalizeObs(raw: RawObservation): Observation {
-    const obs: Observation = {
+    const nc = raw.calculations?.net_changes;
+    const pc = raw.calculations?.pct_changes;
+    return {
       year: raw.year,
       period: raw.period,
       value: raw.value,
+      ...(raw.periodName && { periodName: raw.periodName }),
+      ...(raw.footnotes?.length && {
+        footnotes: raw.footnotes
+          .map((f) => [f.code, f.text].filter(Boolean).join(': '))
+          .filter(Boolean),
+      }),
+      ...(nc?.['1'] && { netChange1Month: nc['1'] }),
+      ...(nc?.['12'] && { netChange12Month: nc['12'] }),
+      ...(pc?.['1'] && { pctChange1Month: pc['1'] }),
+      ...(pc?.['12'] && { pctChange12Month: pc['12'] }),
     };
-    if (raw.periodName) obs.periodName = raw.periodName;
-    if (raw.footnotes?.length) {
-      obs.footnotes = raw.footnotes
-        .map((f) => [f.code, f.text].filter(Boolean).join(': '))
-        .filter(Boolean);
-    }
-    const nc = raw.calculations?.net_changes;
-    const pc = raw.calculations?.pct_changes;
-    if (nc) {
-      if (nc['1']) obs.netChange1Month = nc['1'];
-      if (nc['12']) obs.netChange12Month = nc['12'];
-    }
-    if (pc) {
-      if (pc['1']) obs.pctChange1Month = pc['1'];
-      if (pc['12']) obs.pctChange12Month = pc['12'];
-    }
-    return obs;
   }
 }
 

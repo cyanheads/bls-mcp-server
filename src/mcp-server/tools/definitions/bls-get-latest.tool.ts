@@ -125,7 +125,7 @@ export const blsGetLatestTool = tool('bls_get_latest', {
           });
           continue;
         }
-        const entry: (typeof succeeded)[number] = {
+        succeeded.push({
           seriesId: data.seriesId,
           ...(data.title && { title: data.title }),
           ...(data.area && { area: data.area }),
@@ -138,8 +138,7 @@ export const blsGetLatestTool = tool('bls_get_latest', {
             ...(obs.periodName && { periodName: obs.periodName }),
             ...(obs.footnotes?.length && { footnotes: obs.footnotes }),
           },
-        };
-        succeeded.push(entry);
+        });
       } catch (err) {
         failed.push({
           seriesId,

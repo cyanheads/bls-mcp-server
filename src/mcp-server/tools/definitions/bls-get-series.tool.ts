@@ -232,7 +232,7 @@ export const blsGetSeriesTool = tool('bls_get_series', {
       };
     }
 
-    const result = {
+    return {
       series: allSeries.map((s) => ({
         seriesId: s.seriesId,
         ...(s.title && { title: s.title }),
@@ -244,7 +244,6 @@ export const blsGetSeriesTool = tool('bls_get_series', {
       })),
       spilled: false as const,
     };
-    return result;
   },
 
   format: (result) => {

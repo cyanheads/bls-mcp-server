@@ -7,7 +7,11 @@
 
 <div align="center">
 
-[![npm](https://img.shields.io/npm/v/@cyanheads/bls-mcp-server?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@cyanheads/bls-mcp-server) [![Version](https://img.shields.io/badge/Version-0.1.4-blue.svg?style=flat-square)](./CHANGELOG.md) [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-^1.29.0-green.svg?style=flat-square)](https://modelcontextprotocol.io/) [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg?style=flat-square)](./LICENSE) [![TypeScript](https://img.shields.io/badge/TypeScript-^6.0.3-3178C6.svg?style=flat-square)](https://www.typescriptlang.org/) [![Bun](https://img.shields.io/badge/Bun-v1.3.2-blueviolet.svg?style=flat-square)](https://bun.sh/)
+[![Version](https://img.shields.io/badge/Version-0.1.4-blue.svg?style=flat-square)](./CHANGELOG.md) [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg?style=flat-square)](./LICENSE) [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/users/cyanheads/packages/container/package/bls-mcp-server) [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-^1.29.0-green.svg?style=flat-square)](https://modelcontextprotocol.io/) [![npm](https://img.shields.io/npm/v/@cyanheads/bls-mcp-server?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/@cyanheads/bls-mcp-server) [![TypeScript](https://img.shields.io/badge/TypeScript-^6.0.3-3178C6.svg?style=flat-square)](https://www.typescriptlang.org/) [![Bun](https://img.shields.io/badge/Bun-v1.3.2-blueviolet.svg?style=flat-square)](https://bun.sh/)
+
+</div>
+
+<div align="center">
 
 [![Install in Claude Desktop](https://img.shields.io/badge/Install_in-Claude_Desktop-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](https://github.com/cyanheads/bls-mcp-server/releases/latest/download/@cyanheads-bls-mcp-server.mcpb) [![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=bls-mcp-server&config=eyJjb21tYW5kIjoibnB4IC15IEBjeWFuaGVhZHMvYmxzLW1jcC1zZXJ2ZXIifQ==) [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Server-0098FF?style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect?url=vscode:mcp/install?%7B%22name%22%3A%22bls-mcp-server%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40cyanheads%2Fbls-mcp-server%22%5D%7D)
 
@@ -19,14 +23,17 @@
 
 ## Tools
 
-Four tools covering the BLS data surface — survey discovery, SeriesID resolution, history, and current values:
+Seven tools in two groups — four for BLS data access (survey discovery, SeriesID resolution, history, current values) and three for optional DataCanvas SQL analysis of large result sets:
 
 | Tool | Description |
 |:-----|:------------|
-| `bls_list_surveys` | List BLS survey programs (CPI, CPS, CES, JOLTS, PPI, OEWS, …) with codes, descriptions, and coverage. |
+| `bls_list_surveys` | List BLS survey programs (CPI, CPS, CES, JOLTS, PPI, OEWS, …) with codes, descriptions, and calculation-support flags. |
 | `bls_search_series` | Search the BLS series catalog by natural language, survey, area, or keywords to resolve cryptic SeriesIDs. |
 | `bls_get_series` | Fetch time-series data for 1–50 BLS series by SeriesID, with optional year range and period-over-period calculations. |
 | `bls_get_latest` | Return the single most recent observation for one or more BLS series. |
+| `bls_dataframe_describe` | List canvas dataframes registered by `bls_get_series` — provenance, TTL, row count, column schema. Requires `CANVAS_PROVIDER_TYPE=duckdb`. |
+| `bls_dataframe_query` | Run a SELECT against canvas dataframes registered by `bls_get_series`. Supports JOINs, aggregates, window functions, CTEs. Requires `CANVAS_PROVIDER_TYPE=duckdb`. |
+| `bls_dataframe_drop` | Drop a canvas dataframe by name. Opt-in via `BLS_DATAFRAME_DROP_ENABLED=true`; TTL handles cleanup by default. Requires `CANVAS_PROVIDER_TYPE=duckdb`. |
 
 ### `bls_list_surveys`
 
@@ -34,8 +41,8 @@ List available BLS survey programs and their metadata.
 
 - Covers all major BLS programs: CPS, CES, CPI, PPI, JOLTS, LAUS, OEWS, ECEC, and others
 - Optional `category` filter (`prices`, `employment`, `wages`, `productivity`, `injuries`, `time_use`)
-- Returns survey codes, descriptions, geographic and subject coverage, and calculation support flags
-- Backed by the live BLS surveys API with aggressive caching (monthly TTL); does not consume daily quota
+- Returns survey codes, descriptions, and calculation-support flags (`allowsNetChange`, `allowsPercentChange`, `hasAnnualAverages`)
+- Backed by the live BLS surveys API with monthly caching; does not consume daily API quota
 
 ---
 
@@ -47,7 +54,7 @@ The entry point for most BLS workflows. Resolves human concepts to BLS SeriesIDs
 - Free-text and keyword search against the full BLS series catalog
 - Filter by survey code, geographic area (state name, MSA, or FIPS), and seasonal adjustment flag
 - Returns decoded series components (survey, area, item, seasonal flag) alongside the plain-language name
-- Operates entirely offline against LABSTAT flat files bundled at build time — no API quota consumed
+- Operates entirely offline against LABSTAT flat files bundled at startup — no API quota consumed
 - Use before `bls_get_series` or `bls_get_latest` when you have a concept but not a SeriesID
 
 ---
@@ -56,11 +63,11 @@ The entry point for most BLS workflows. Resolves human concepts to BLS SeriesIDs
 
 Fetch historical time-series data for one or more BLS series.
 
-- Batch fetch up to 50 series per request (counts as one of the 500 daily queries)
+- Batch fetch up to 50 series per request (counts as one of the 500 daily API queries)
 - Optional `start_year` / `end_year` window (BLS caps history at 20 years per request)
 - Optional `calculations: true` for BLS-server-side net change and percent change (all-or-nothing; check `bls_list_surveys` for per-survey support)
-- Returns observations with series metadata (title, unit, seasonality)
-- DataCanvas spillover for large result sets when `CANVAS_PROVIDER_TYPE=duckdb`
+- Returns observations with series metadata (title, area, item, seasonality)
+- Spills to a DataCanvas dataframe when the observation count exceeds the inline context budget — response includes a `dataset.name` handle for SQL via `bls_dataframe_query`. Requires `CANVAS_PROVIDER_TYPE=duckdb`.
 
 ---
 
@@ -68,9 +75,42 @@ Fetch historical time-series data for one or more BLS series.
 
 Get the current value for one or more BLS series.
 
-- Issues one GET per SeriesID (no batch-latest endpoint exists in BLS v2) — each counts as one of the 500 daily queries
+- Issues one GET per SeriesID (no batch-latest endpoint exists in BLS v2) — each counts as one of the 500 daily API queries
 - Recommended limit: ≤10 series per call; accepts up to 50
-- For "current value" across many series, `bls_get_series` with a narrow year window is more quota-efficient (one query regardless of series count)
+- For "current value" across many series, `bls_get_series` with a narrow year window is more quota-efficient (one API query regardless of series count)
+- Partial success reporting — failed series are returned in a separate `failed[]` array alongside successful results
+
+---
+
+### `bls_dataframe_describe`
+
+Inspect canvas dataframes registered by `bls_get_series`.
+
+- Lists all active dataframes for the current tenant: table name, source tool, query params, row count, column schema, TTL
+- Optionally describe a single dataframe by name
+- Lazy-sweeps expired entries before responding
+- Use before writing SQL to confirm column names
+
+---
+
+### `bls_dataframe_query`
+
+Run SQL against canvas dataframes registered by `bls_get_series`.
+
+- Read-only: writes, DDL, DROP, COPY, PRAGMA, ATTACH, and external-file table functions are rejected
+- Supports JOINs, aggregates, window functions, and CTEs
+- Optional `register_as` persists the query result as a new named dataframe with a fresh TTL — useful for chaining analyses without re-consuming BLS API quota
+- Inline row cap: 1,000 rows by default (max 10,000); full results live on-canvas when `register_as` is set
+- Zero BLS API quota consumed
+
+---
+
+### `bls_dataframe_drop`
+
+Drop a canvas dataframe by name. Idempotent — returns `dropped: false` when nothing matched.
+
+- Use to free canvas resources ahead of the per-table TTL when an analysis is complete
+- Must be explicitly enabled via `BLS_DATAFRAME_DROP_ENABLED=true` (TTL handles cleanup by default)
 
 ## Features
 
@@ -89,10 +129,11 @@ BLS-specific:
 - Offline series catalog search against LABSTAT flat files — zero API quota for discovery
 - Typed error contracts for BLS-specific failure modes: quota exhaustion, locked database, calculations not supported
 - Period-over-period calculations via BLS server-side flag (consistent with BLS published numbers)
+- DataCanvas spillover (DuckDB) for large multi-series result sets — SQL access without re-querying the API
 
 ## Getting started
 
-Add the following to your MCP client configuration file. A free BLS API key is required — register at [bls.gov/developers](https://www.bls.gov/developers/home.htm).
+Add the following to your MCP client configuration file. A free BLS API key unlocks 500 queries/day — register at [bls.gov/developers](https://www.bls.gov/developers/home.htm). The server works without a key at 25 req/day.
 
 ```json
 {
@@ -154,7 +195,7 @@ MCP_TRANSPORT_TYPE=http MCP_HTTP_PORT=3010 BLS_API_KEY=... bun run start:http
 ### Prerequisites
 
 - [Bun v1.3.2](https://bun.sh/) or higher (or Node.js v24+).
-- A free BLS API v2 key — register at [bls.gov/developers](https://www.bls.gov/developers/home.htm). The v2 key grants 500 queries/day; v1 (keyless) is not supported.
+- A free BLS API v2 key — register at [bls.gov/developers](https://www.bls.gov/developers/home.htm). Grants 500 queries/day; the server also works without a key at 25 req/day.
 
 ### Installation
 
@@ -189,9 +230,11 @@ All configuration is validated at startup via Zod schemas in `src/config/server-
 
 | Variable | Description | Default |
 |:---------|:------------|:--------|
-| `BLS_API_KEY` | **Required.** BLS v2 API key (500 queries/day). Register free at [bls.gov/developers](https://www.bls.gov/developers/home.htm). | — |
+| `BLS_API_KEY` | BLS v2 API key. Optional — 25 req/day without, 500 req/day with. Register free at [bls.gov/developers](https://www.bls.gov/developers/home.htm). | — |
 | `BLS_BASE_URL` | BLS API v2 base URL. | `https://api.bls.gov/publicAPI/v2` |
-| `BLS_CATALOG_BASE_URL` | LABSTAT flat-file base URL (useful for local mirrors). | `https://download.bls.gov/pub/time.series` |
+| `BLS_CATALOG_BASE_URL` | LABSTAT flat-file base URL. Override to point at a local mirror. | `https://download.bls.gov/pub/time.series` |
+| `BLS_DATASET_TTL_SECONDS` | Per-dataframe TTL for canvas-registered tables, in seconds. | `86400` (24 h) |
+| `BLS_DATAFRAME_DROP_ENABLED` | Expose `bls_dataframe_drop`. TTL handles cleanup by default. | `false` |
 | `CANVAS_PROVIDER_TYPE` | Set to `duckdb` to enable DataCanvas tabular spillover for large result sets. | `none` |
 | `MCP_TRANSPORT_TYPE` | Transport: `stdio` or `http`. | `stdio` |
 | `MCP_HTTP_PORT` | HTTP server port. | `3010` |
@@ -199,6 +242,8 @@ All configuration is validated at startup via Zod schemas in `src/config/server-
 | `MCP_LOG_LEVEL` | Log level (RFC 5424). | `info` |
 | `LOGS_DIR` | Directory for log files (Node.js only). | `<project-root>/logs` |
 | `OTEL_ENABLED` | Enable OpenTelemetry instrumentation. | `false` |
+
+See [`.env.example`](./.env.example) for the full list of optional overrides.
 
 ## Running the server
 
@@ -224,15 +269,25 @@ All configuration is validated at startup via Zod schemas in `src/config/server-
   bun run lint:mcp   # Validate MCP definitions against spec
   ```
 
+### Docker
+
+```sh
+docker build -t bls-mcp-server .
+docker run --rm -e BLS_API_KEY=your-key -e MCP_TRANSPORT_TYPE=http -p 3010:3010 bls-mcp-server
+```
+
+The Dockerfile defaults to HTTP transport, stateless session mode, and logs to `/var/log/bls-mcp-server`. OpenTelemetry peer dependencies are installed by default — build with `--build-arg OTEL_ENABLED=false` to omit them.
+
 ## Project structure
 
 | Directory | Purpose |
 |:----------|:--------|
-| `src/index.ts` | `createApp()` entry point — registers tools and inits services. |
+| `src/index.ts` | `createApp()` entry point — registers tools and initializes services. |
 | `src/config` | Server-specific environment variable parsing and validation with Zod. |
 | `src/mcp-server/tools` | Tool definitions (`*.tool.ts`). |
 | `src/services/bls-api` | BLS API v2 service — batch fetch, latest-value GET, surveys metadata. |
 | `src/services/bls-catalog` | LABSTAT flat-file catalog — offline series index and search. |
+| `src/services/canvas-bridge` | DataCanvas bridge — dataframe registration, SQL gate, lifecycle management. |
 | `docs/design.md` | Full tool surface specification, service architecture, and error contracts. |
 | `tests/` | Unit and integration tests mirroring `src/`. |
 

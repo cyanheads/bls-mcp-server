@@ -92,9 +92,9 @@ interface SeriesColumns {
 /** Parse an area code → name mapping from a `.area` file. */
 function parseCodeMap(text: string, keyCol = 0, valCol = 1): Map<string, string> {
   const map = new Map<string, string>();
-  const lines = text.split('\n');
-  for (let i = 1; i < lines.length; i++) {
-    const parts = lines[i]?.split('\t');
+  const [, ...dataLines] = text.split('\n');
+  for (const line of dataLines) {
+    const parts = line?.split('\t');
     const key = parts?.[keyCol]?.trim();
     const val = parts?.[valCol]?.trim();
     if (key && val) map.set(key, val);
@@ -143,10 +143,10 @@ function parseSeries(
     const itemName = itemCode ? itemCodes.get(itemCode) : undefined;
 
     if (!title) {
-      const parts2: string[] = [surveyName];
-      if (itemName) parts2.push(itemName);
-      if (areaName) parts2.push(areaName);
-      title = parts2.join(' - ');
+      const titleParts: string[] = [surveyName];
+      if (itemName) titleParts.push(itemName);
+      if (areaName) titleParts.push(areaName);
+      title = titleParts.join(' - ');
     }
 
     const seasonal = seasonCode
@@ -204,8 +204,7 @@ export class BlsCatalogService {
     const itemCodes = new Map<string, string>();
 
     const tableNames = survey.codeTables ?? [];
-    for (let i = 0; i < codeResults.length; i++) {
-      const res = codeResults[i];
+    for (const [i, res] of codeResults.entries()) {
       if (res?.status !== 'fulfilled' || !res.value.ok) continue;
       const text = await res.value.text();
       const tableName = tableNames[i];
@@ -234,6 +233,7 @@ export class BlsCatalogService {
     }
 
     const query = input.query.toLowerCase().trim();
+    const queryUpper = query.toUpperCase();
     const surveyFilter = input.survey?.toUpperCase();
     const areaFilter = input.area?.toLowerCase();
     const seasonFilter = input.seasonal_adjustment;
@@ -250,7 +250,7 @@ export class BlsCatalogService {
     // Score each candidate. Exact series ID match = highest priority.
     const scored: Array<{ s: CatalogSeries; score: number }> = [];
     for (const s of candidates) {
-      if (s.seriesId.toUpperCase() === query.toUpperCase()) {
+      if (s.seriesId.toUpperCase() === queryUpper) {
         scored.push({ s, score: 1000 });
         continue;
       }

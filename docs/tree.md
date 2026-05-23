@@ -1,6 +1,6 @@
 # bls-mcp-server - Directory Structure
 
-Generated on: 2026-05-23 10:50:00
+Generated on: 2026-05-23 14:18:05
 
 ```text
 bls-mcp-server/
@@ -152,6 +152,7 @@ bls-mcp-server/
 ├── .mcpbignore
 ├── biome.json
 ├── bun.lock
+├── bunfig.toml
 ├── CHANGELOG.md
 ├── CLAUDE.md
 ├── devcheck.config.json

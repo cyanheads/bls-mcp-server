@@ -132,7 +132,7 @@ export const blsDataframeQueryTool = tool('bls_dataframe_query', {
     for (const row of result.rows) {
       const cells = result.columns.map((c) => {
         const v = row[c];
-        if (v === null || v === undefined) return '';
+        if (v == null) return '';
         if (typeof v === 'string') return v.replace(/\|/g, '\\|');
         if (typeof v === 'object') return JSON.stringify(v).replace(/\|/g, '\\|');
         return String(v);
