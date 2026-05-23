@@ -25,6 +25,7 @@
   "prompts_generated": true,
   "user_config": {
     "BLS_API_KEY": {
+      "title": "BLS API Key",
       "type": "string",
       "description": "BLS v2 API key. Required for v2 access (500 queries/day). Register free at bls.gov/developers.",
       "required": true
