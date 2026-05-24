@@ -2,9 +2,13 @@
 
 All notable changes to this project. Each entry links to its full per-version file in [changelog/](changelog/).
 
+## [0.1.8](changelog/0.1.x/0.1.8.md) — 2026-05-24
+
+Fix bls_get_series batch error messages and canvas-unavailable handling.
+
 ## [0.1.7](changelog/0.1.x/0.1.7.md) — 2026-05-23
 
-Add `@duckdb/node-api ^1.5.3-r.1` — enables the DuckDB canvas provider for `bls_dataframe_describe`, `bls_dataframe_query`, and `bls_dataframe_drop`.
+Add @duckdb/node-api — enables DuckDB canvas provider for dataframe tools.
 
 ## [0.1.6](changelog/0.1.x/0.1.6.md) — 2026-05-23
 

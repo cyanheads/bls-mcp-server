@@ -74,6 +74,13 @@ export const blsGetSeriesTool = tool('bls_get_series', {
       recovery:
         'Remove the calculations flag or use bls_list_surveys to verify calculation support before requesting it.',
     },
+    {
+      reason: 'canvas_unavailable',
+      code: JsonRpcErrorCode.ServiceUnavailable,
+      when: 'The result set exceeds the inline budget and canvas (DuckDB) is not configured.',
+      recovery:
+        'Narrow start_year/end_year to reduce the result set, or enable canvas by setting CANVAS_PROVIDER_TYPE=duckdb.',
+    },
   ],
 
   input: z.object({
@@ -205,28 +212,32 @@ export const blsGetSeriesTool = tool('bls_get_series', {
 
     if (shouldSpill) {
       const bridge = getCanvasBridge();
-      let dataset:
-        | { name: string; row_count: number; expires_at: string; truncated: boolean }
-        | undefined;
 
-      if (bridge) {
-        const registered = await bridge.registerDataframe(ctx, {
-          rows: allRows,
-          sourceTool: 'bls_get_series',
-          queryParams: {
-            series_ids: input.series_ids,
-            start_year: input.start_year,
-            end_year: input.end_year,
-            calculations: input.calculations,
+      if (!bridge) {
+        // Data would be silently truncated — surface this as an error so agents
+        // know to narrow the year range rather than treating partial data as complete.
+        throw ctx.fail(
+          'canvas_unavailable',
+          `Result set exceeded the inline budget (${allRows.length} rows across ${allSeries.length} series). Canvas is not configured — full data cannot be returned.`,
+          {
+            recovery: {
+              hint: 'Narrow start_year/end_year to reduce result size, or enable canvas by setting CANVAS_PROVIDER_TYPE=duckdb.',
+            },
           },
-        });
-        if (registered) {
-          dataset = {
-            ...toDatasetField(registered),
-            truncated: false,
-          };
-        }
+        );
       }
+
+      const registered = await bridge.registerDataframe(ctx, {
+        rows: allRows,
+        sourceTool: 'bls_get_series',
+        queryParams: {
+          series_ids: input.series_ids,
+          start_year: input.start_year,
+          end_year: input.end_year,
+          calculations: input.calculations,
+        },
+      });
+      const dataset = registered ? { ...toDatasetField(registered), truncated: false } : undefined;
 
       // Still return preview rows inline — first 3 observations per series
       const seriesPreview = allSeries.map((s) => ({
@@ -307,12 +318,6 @@ export const blsGetSeriesTool = tool('bls_get_series', {
         );
       }
       lines.push('');
-    }
-
-    if (result.spilled && !result.dataset) {
-      lines.push(
-        '_Results exceeded inline budget but canvas is not enabled (CANVAS_PROVIDER_TYPE=duckdb required for full data)._',
-      );
     }
 
     return [{ type: 'text', text: lines.join('\n').trimEnd() }];

@@ -234,10 +234,16 @@ export class BlsApiService {
         });
       }
       if (/no data available/i.test(msg)) {
-        throw validationError('BLS API: No data available for the requested period range.', {
-          reason: 'no_data_for_period',
-          messages,
-        });
+        // Collect all per-series "no data" messages so the caller can identify
+        // which series to remove or which range to narrow.
+        const detail = messages
+          .filter((m) => /no data available/i.test(m))
+          .map((m) => `  ${m}`)
+          .join('\n');
+        throw validationError(
+          `BLS API: No data available for the requested period range.\n${detail}`,
+          { reason: 'no_data_for_period', messages },
+        );
       }
       if (/calculations.*not supported|does not support.*calculations/i.test(msg)) {
         throw validationError(

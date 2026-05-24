@@ -1,8 +1,8 @@
 {
   "name": "@cyanheads/bls-mcp-server",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "mcpName": "io.github.cyanheads/bls-mcp-server",
-  "description": "Fetch US Bureau of Labor Statistics data — CPI, unemployment, wages, JOLTS, and more via MCP. STDIO or Streamable HTTP.",
+  "description": "Fetch US Bureau of Labor Statistics data \u2014 CPI, unemployment, wages, JOLTS, and more via MCP. STDIO or Streamable HTTP.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -54,9 +54,7 @@
     "mcp-server",
     "model-context-protocol",
     "typescript",
-    "bun",
-    "stdio",
-    "streamable-http"
+    "bun"
   ],
   "repository": {
     "type": "git",
