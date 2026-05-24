@@ -37,9 +37,9 @@ WORKDIR /usr/src/app
 ENV NODE_ENV=production
 
 # OCI image metadata (https://github.com/opencontainers/image-spec/blob/main/annotations.md)
-LABEL org.opencontainers.image.title="@cyanheads/bls-mcp-server"
+LABEL org.opencontainers.image.title="@cyanheads/bls-labor-mcp-server"
 LABEL org.opencontainers.image.description="Fetch US Bureau of Labor Statistics data — CPI, unemployment, wages, JOLTS, and more via MCP. STDIO or Streamable HTTP."
-LABEL org.opencontainers.image.source="https://github.com/cyanheads/bls-mcp-server"
+LABEL org.opencontainers.image.source="https://github.com/cyanheads/bls-labor-mcp-server"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Copy dependency manifests
@@ -73,7 +73,7 @@ COPY --from=build /usr/src/app/dist ./dist
 # We will use this existing user for enhanced security.
 
 # Create and set permissions for the log directory, assigning ownership to the 'bun' user.
-RUN mkdir -p /var/log/bls-mcp-server && chown -R bun:bun /var/log/bls-mcp-server
+RUN mkdir -p /var/log/bls-labor-mcp-server && chown -R bun:bun /var/log/bls-labor-mcp-server
 
 # Switch to the non-root user
 USER bun
@@ -89,7 +89,7 @@ ENV MCP_HTTP_HOST="0.0.0.0"
 ENV MCP_TRANSPORT_TYPE="http"
 ENV MCP_SESSION_MODE="stateless"
 ENV MCP_LOG_LEVEL="info"
-ENV LOGS_DIR="/var/log/bls-mcp-server"
+ENV LOGS_DIR="/var/log/bls-labor-mcp-server"
 ENV MCP_FORCE_CONSOLE_LOGGING="true"
 
 # Expose the port the server listens on

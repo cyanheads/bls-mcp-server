@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @fileoverview bls-mcp-server MCP server entry point. Registers all BLS tools
+ * @fileoverview bls-labor-mcp-server MCP server entry point. Registers all BLS tools
  * and initializes services via the framework's setup() callback.
  * @module index
  */
@@ -54,7 +54,7 @@ await createApp({
       .load()
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        process.stderr.write(`[bls-mcp-server] Catalog load error: ${msg}\n`);
+        process.stderr.write(`[bls-labor-mcp-server] Catalog load error: ${msg}\n`);
       });
   },
 });

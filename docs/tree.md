@@ -1,9 +1,9 @@
-# bls-mcp-server - Directory Structure
+# bls-labor-mcp-server - Directory Structure
 
-Generated on: 2026-05-24 21:59:26
+Generated on: 2026-05-24 23:01:07
 
 ```text
-bls-mcp-server/
+bls-labor-mcp-server/
 ├── .claude/
 ├── .github/
 │   └── ISSUE_TEMPLATE/
@@ -15,6 +15,7 @@ bls-mcp-server/
 │   └── settings.json
 ├── changelog/
 │   ├── 0.1.x/
+│   ├── 0.2.x/
 │   └── template.md
 ├── docs/
 │   ├── design.md

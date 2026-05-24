@@ -1,13 +1,13 @@
 {
-  "name": "@cyanheads/bls-mcp-server",
-  "version": "0.1.9",
-  "mcpName": "io.github.cyanheads/bls-mcp-server",
+  "name": "@cyanheads/bls-labor-mcp-server",
+  "version": "0.2.0",
+  "mcpName": "io.github.cyanheads/bls-labor-mcp-server",
   "description": "Fetch US Bureau of Labor Statistics data — CPI, unemployment, wages, JOLTS, and more via MCP. STDIO or Streamable HTTP.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "bls-mcp-server": "dist/index.js"
+    "bls-labor-mcp-server": "dist/index.js"
   },
   "files": [
     "changelog/",
@@ -29,7 +29,7 @@
     "format": "biome check --write --unsafe .",
     "lint:mcp": "bun run scripts/lint-mcp.ts",
     "lint:packaging": "bun run scripts/lint-packaging.ts",
-    "bundle": "bun run build && npx -y @anthropic-ai/mcpb pack . dist/bls-mcp-server.mcpb",
+    "bundle": "bun run build && npx -y @anthropic-ai/mcpb pack . dist/bls-labor-mcp-server.mcpb",
     "changelog:build": "bun run scripts/build-changelog.ts",
     "changelog:check": "bun run scripts/build-changelog.ts --check",
     "list-skills": "bun run scripts/list-skills.ts",
@@ -48,6 +48,7 @@
     "wages",
     "jolts",
     "economics",
+    "labor",
     "labor-market",
     "time-series",
     "mcp",
@@ -60,13 +61,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cyanheads/bls-mcp-server.git"
+    "url": "git+https://github.com/cyanheads/bls-labor-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/cyanheads/bls-mcp-server/issues"
+    "url": "https://github.com/cyanheads/bls-labor-mcp-server/issues"
   },
-  "homepage": "https://github.com/cyanheads/bls-mcp-server#readme",
-  "author": "cyanheads <casey@caseyjhand.com> (https://github.com/cyanheads/bls-mcp-server#readme)",
+  "homepage": "https://github.com/cyanheads/bls-labor-mcp-server#readme",
+  "author": "cyanheads <casey@caseyjhand.com> (https://github.com/cyanheads/bls-labor-mcp-server#readme)",
   "funding": [
     {
       "type": "github",

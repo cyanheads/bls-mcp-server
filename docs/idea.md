@@ -1,4 +1,4 @@
-# bls-mcp-server — Idea
+# bls-labor-mcp-server — Idea
 
 Pre-design seed. Feeds into `design-mcp-server` to produce `docs/design.md`.
 

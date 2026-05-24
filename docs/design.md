@@ -1,4 +1,4 @@
-# bls-mcp-server — Design
+# bls-labor-mcp-server — Design
 
 ## MCP Surface
 
@@ -37,7 +37,7 @@ None. Read-only research server; no recurring interaction patterns warrant a str
 
 ## Overview
 
-`bls-mcp-server` wraps the Bureau of Labor Statistics public API (v2), exposing US labor, price, productivity, and employment data. The BLS is the primary source for CPI, unemployment, wages, JOLTS, PPI, occupational employment, and related statistics — predating and often more current than republished FRED series.
+`bls-labor-mcp-server` wraps the Bureau of Labor Statistics public API (v2), exposing US labor, price, productivity, and employment data. The BLS is the primary source for CPI, unemployment, wages, JOLTS, PPI, occupational employment, and related statistics — predating and often more current than republished FRED series.
 
 The core UX problem is SeriesID resolution: BLS identifiers (`LNS14000000`, `CES0000000001`) encode survey + area + item + seasonal flag in opaque positional codes. `bls_search_series` is the anchor tool — it translates human concepts into SeriesIDs so the other tools can operate.
 

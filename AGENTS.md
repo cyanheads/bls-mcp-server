@@ -1,7 +1,7 @@
 # Agent Protocol
 
-**Server:** bls-mcp-server
-**Version:** 0.1.9
+**Server:** bls-labor-mcp-server
+**Version:** 0.2.0
 **Framework:** [@cyanheads/mcp-ts-core](https://www.npmjs.com/package/@cyanheads/mcp-ts-core) `^0.9.9`
 **Engines:** Bun ≥1.3.0, Node ≥24.0.0
 **Zod:** ^4.4.3
@@ -31,7 +31,7 @@ Tailor suggestions to what's actually missing or stale — don't recite the full
 
 ## Domain: Bureau of Labor Statistics
 
-`bls-mcp-server` wraps the BLS public API v2, exposing US labor, price, productivity, and employment data. The BLS is the primary source for CPI, unemployment, wages, JOLTS, PPI, occupational employment, and related statistics.
+`bls-labor-mcp-server` wraps the BLS public API v2, exposing US labor, price, productivity, and employment data. The BLS is the primary source for CPI, unemployment, wages, JOLTS, PPI, occupational employment, and related statistics.
 
 **The central UX problem is SeriesID resolution.** BLS identifiers (`LNS14000000`, `CES0000000001`) encode survey + area + item + seasonal flag in opaque positional codes. Agents and users can't know them by heart. `bls_search_series` is the anchor tool — it resolves human concepts to SeriesIDs so the other tools can operate.
 

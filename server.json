@@ -1,19 +1,25 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.cyanheads/bls-mcp-server",
+  "name": "io.github.cyanheads/bls-labor-mcp-server",
   "description": "Fetch US Bureau of Labor Statistics data — CPI, unemployment, wages, JOLTS, and more via MCP.",
   "repository": {
-    "url": "https://github.com/cyanheads/bls-mcp-server",
+    "url": "https://github.com/cyanheads/bls-labor-mcp-server",
     "source": "github"
   },
-  "version": "0.1.9",
+  "version": "0.2.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://bls-labor.caseyjhand.com/mcp"
+    }
+  ],
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "@cyanheads/bls-mcp-server",
+      "identifier": "@cyanheads/bls-labor-mcp-server",
       "runtimeHint": "bun",
-      "version": "0.1.9",
+      "version": "0.2.0",
       "packageArguments": [
         {
           "type": "positional",
@@ -46,9 +52,9 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "@cyanheads/bls-mcp-server",
+      "identifier": "@cyanheads/bls-labor-mcp-server",
       "runtimeHint": "bun",
-      "version": "0.1.9",
+      "version": "0.2.0",
       "packageArguments": [
         {
           "type": "positional",
