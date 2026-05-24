@@ -130,10 +130,9 @@ function parseSeries(
     const line = lines[i]?.trim();
     if (!line) continue;
     const parts = line.split('\t');
-    const rawId = parts[cols.seriesId]?.trim();
-    if (!rawId) continue;
+    const seriesId = parts[cols.seriesId]?.trim();
+    if (!seriesId) continue;
 
-    const seriesId = rawId;
     let title = cols.title !== undefined ? parts[cols.title]?.trim() : undefined;
     const areaCode = cols.areaCode !== undefined ? parts[cols.areaCode]?.trim() : undefined;
     const itemCode = cols.itemCode !== undefined ? parts[cols.itemCode]?.trim() : undefined;

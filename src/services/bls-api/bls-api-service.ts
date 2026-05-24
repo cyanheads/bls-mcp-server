@@ -156,7 +156,7 @@ export class BlsApiService {
         let parsed: BlsSurveysResponse;
         try {
           parsed = JSON.parse(text) as BlsSurveysResponse;
-        } catch (e) {
+        } catch (e: unknown) {
           throw serializationError(
             'Failed to parse BLS surveys response as JSON',
             {},
@@ -207,7 +207,7 @@ export class BlsApiService {
     let parsed: BlsApiResponse;
     try {
       parsed = JSON.parse(text) as BlsApiResponse;
-    } catch (e) {
+    } catch (e: unknown) {
       throw serializationError('Failed to parse BLS API response as JSON', {}, { cause: e });
     }
 

@@ -2,6 +2,10 @@
 
 All notable changes to this project. Each entry links to its full per-version file in [changelog/](changelog/).
 
+## [0.1.9](changelog/0.1.x/0.1.9.md) — 2026-05-24
+
+Parallel series fetches in bls_get_latest, code simplification, mcp-ts-core ^0.9.6 → ^0.9.9, skills sync.
+
 ## [0.1.8](changelog/0.1.x/0.1.8.md) — 2026-05-24
 
 Fix bls_get_series batch error messages and canvas-unavailable handling.

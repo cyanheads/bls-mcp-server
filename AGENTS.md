@@ -1,8 +1,8 @@
 # Agent Protocol
 
 **Server:** bls-mcp-server
-**Version:** 0.1.8
-**Framework:** [@cyanheads/mcp-ts-core](https://www.npmjs.com/package/@cyanheads/mcp-ts-core) `^0.9.6`
+**Version:** 0.1.9
+**Framework:** [@cyanheads/mcp-ts-core](https://www.npmjs.com/package/@cyanheads/mcp-ts-core) `^0.9.9`
 **Engines:** Bun ≥1.3.0, Node ≥24.0.0
 **Zod:** ^4.4.3
 
@@ -64,6 +64,7 @@ See `docs/design.md` for the full tool surface specification, service architectu
 - **Use `ctx.state`** for tenant-scoped storage. Never access persistence directly.
 - **Check `ctx.elicit` / `ctx.sample`** for presence before calling.
 - **Secrets in env vars only** — never hardcoded.
+- **Close the loop on issues.** When implementing work tracked by a GitHub issue, comment on the issue with what landed before moving on. The comment is for future readers — state the concrete changes, not the conversation that produced them.
 
 ---
 
@@ -269,6 +270,8 @@ Available skills:
 | `devcheck` | Lint, format, typecheck, audit |
 | `polish-docs-meta` | Finalize docs, README, metadata, and agent protocol for shipping |
 | `maintenance` | Investigate changelogs, adopt upstream changes, and sync skills after `bun update --latest` |
+| `git-wrapup` | Version bump, changelog, commit, and tag workflow |
+| `release-and-publish` | Push commits/tags and publish to npm, MCP Registry, GitHub Releases, GHCR |
 | `report-issue-framework` | File a bug or feature request against `@cyanheads/mcp-ts-core` via `gh` CLI |
 | `report-issue-local` | File a bug or feature request against this server's own repo via `gh` CLI |
 | `api-auth` | Auth modes, scopes, JWT/OAuth |

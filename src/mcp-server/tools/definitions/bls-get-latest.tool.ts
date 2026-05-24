@@ -97,6 +97,15 @@ export const blsGetLatestTool = tool('bls_get_latest', {
     ctx.log.info('Executing bls_get_latest', { count: input.series_ids.length });
     const service = getBlsApiService();
 
+    // Pair each seriesId with its settlement so downstream logic has the id regardless
+    // of whether the fetch succeeded or rejected (rejections don't carry the seriesId).
+    const pairs = await Promise.allSettled(
+      input.series_ids.map(async (seriesId) => ({
+        seriesId,
+        data: await service.fetchLatest(seriesId, ctx),
+      })),
+    );
+
     const succeeded: Array<{
       seriesId: string;
       title?: string;
@@ -113,43 +122,48 @@ export const blsGetLatestTool = tool('bls_get_latest', {
     }> = [];
     const failed: Array<{ seriesId: string; error: string }> = [];
 
-    for (const seriesId of input.series_ids) {
-      try {
-        const data = await service.fetchLatest(seriesId, ctx);
-        const obs = data.observations[0];
-        if (!obs) {
-          failed.push({
-            seriesId,
-            error:
-              'No observations returned — series may exist but has no data for the current period.',
-          });
-          continue;
-        }
-        succeeded.push({
-          seriesId: data.seriesId,
-          ...(data.title && { title: data.title }),
-          ...(data.area && { area: data.area }),
-          ...(data.item && { item: data.item }),
-          ...(data.seasonal && { seasonal: data.seasonal }),
-          latestObservation: {
-            year: obs.year,
-            period: obs.period,
-            value: obs.value,
-            ...(obs.periodName && { periodName: obs.periodName }),
-            ...(obs.footnotes?.length && { footnotes: obs.footnotes }),
-          },
-        });
-      } catch (err) {
+    for (const [i, settlement] of pairs.entries()) {
+      // i is always within bounds — pairs is derived 1:1 from input.series_ids.
+      const requestedId = input.series_ids[i] ?? '';
+      if (settlement.status === 'rejected') {
+        const err: unknown = settlement.reason;
         // Rethrow request-level failures — quota and lock affect all series, not just this one.
         if (err instanceof McpError) {
           const reason = (err.data as Record<string, unknown> | undefined)?.reason;
           if (reason === 'quota_exceeded' || reason === 'series_locked') throw err;
         }
         failed.push({
-          seriesId,
+          seriesId: requestedId,
           error: err instanceof Error ? err.message : String(err),
         });
+        continue;
       }
+
+      const { seriesId, data } = settlement.value;
+      const obs = data.observations[0];
+      if (!obs) {
+        failed.push({
+          seriesId,
+          error:
+            'No observations returned — series may exist but has no data for the current period.',
+        });
+        continue;
+      }
+
+      succeeded.push({
+        seriesId: data.seriesId,
+        ...(data.title && { title: data.title }),
+        ...(data.area && { area: data.area }),
+        ...(data.item && { item: data.item }),
+        ...(data.seasonal && { seasonal: data.seasonal }),
+        latestObservation: {
+          year: obs.year,
+          period: obs.period,
+          value: obs.value,
+          ...(obs.periodName && { periodName: obs.periodName }),
+          ...(obs.footnotes?.length && { footnotes: obs.footnotes }),
+        },
+      });
     }
 
     return {
