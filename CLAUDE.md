@@ -1,7 +1,7 @@
 # Agent Protocol
 
 **Server:** bls-labor-mcp-server
-**Version:** 0.2.0
+**Version:** 0.2.1
 **Framework:** [@cyanheads/mcp-ts-core](https://www.npmjs.com/package/@cyanheads/mcp-ts-core) `^0.9.9`
 **Engines:** Bun ≥1.3.0, Node ≥24.0.0
 **Zod:** ^4.4.3

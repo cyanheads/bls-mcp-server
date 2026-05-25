@@ -2,6 +2,10 @@
 
 All notable changes to this project. Each entry links to its full per-version file in [changelog/](changelog/).
 
+## [0.2.1](changelog/0.2.x/0.2.1.md) — 2026-05-25
+
+Catalog load retries with linear backoff on cold-start failure; catalogLoadError surfaced in search error message.
+
 ## [0.2.0](changelog/0.2.x/0.2.0.md) — 2026-05-24 · ⚠️ Breaking
 
 Rename: bls-mcp-server → bls-labor-mcp-server. npm, Docker, and MCP registry identifiers updated. Tool names (bls_*) unchanged.

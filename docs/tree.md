@@ -1,6 +1,6 @@
 # bls-labor-mcp-server - Directory Structure
 
-Generated on: 2026-05-24 23:01:07
+Generated on: 2026-05-25 09:05:24
 
 ```text
 bls-labor-mcp-server/
@@ -158,6 +158,7 @@ bls-labor-mcp-server/
 ├── bun.lock
 ├── bunfig.toml
 ├── CHANGELOG.md
+├── CITATION.cff
 ├── CLAUDE.md
 ├── devcheck.config.json
 ├── Dockerfile
