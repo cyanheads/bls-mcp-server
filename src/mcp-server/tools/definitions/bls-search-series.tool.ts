@@ -101,9 +101,10 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
       );
     }
     if (service.totalSeries === 0) {
+      const detail = service.catalogLoadError ? ` ${service.catalogLoadError}` : '';
       throw ctx.fail(
         'catalog_unavailable',
-        'The BLS series catalog loaded but is empty — all LABSTAT downloads failed at startup. Check BLS_CATALOG_BASE_URL and restart the server.',
+        `The BLS series catalog loaded but is empty — all LABSTAT downloads failed at startup.${detail} Check BLS_CATALOG_BASE_URL and restart the server.`,
         { ...ctx.recoveryFor('catalog_unavailable') },
       );
     }

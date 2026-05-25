@@ -171,18 +171,31 @@ export class BlsCatalogService {
 
   constructor(private readonly catalogBaseUrl: string) {}
 
-  /** Fetch all LABSTAT series files and build the in-memory index. */
-  async load(): Promise<void> {
-    const results = await Promise.allSettled(SURVEYS.map((survey) => this.loadSurvey(survey)));
-    const all: CatalogSeries[] = [];
-    for (const r of results) {
-      if (r.status === 'fulfilled') all.push(...r.value);
+  /**
+   * Fetch all LABSTAT series files and build the in-memory index.
+   * Retries up to `maxAttempts` times with linear backoff (attempt * 5 s).
+   * Sets `loaded = true` after the final attempt regardless of outcome so
+   * callers can distinguish "still loading" from "load failed".
+   */
+  async load(maxAttempts = 3): Promise<void> {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const results = await Promise.allSettled(SURVEYS.map((survey) => this.loadSurvey(survey)));
+      const all: CatalogSeries[] = [];
+      for (const r of results) {
+        if (r.status === 'fulfilled') all.push(...r.value);
+      }
+      if (all.length > 0) {
+        this.index = all;
+        this.loaded = true;
+        this.loadError = undefined;
+        return;
+      }
+      if (attempt < maxAttempts) {
+        await new Promise<void>((resolve) => setTimeout(resolve, attempt * 5_000));
+      }
     }
-    this.index = all;
     this.loaded = true;
-    if (all.length === 0) {
-      this.loadError = 'No LABSTAT series files could be loaded — all surveys failed.';
-    }
+    this.loadError = `Catalog load failed after ${maxAttempts} attempts — all LABSTAT downloads returned empty.`;
   }
 
   private async loadSurvey(survey: SurveyDefinition): Promise<CatalogSeries[]> {
@@ -305,6 +318,10 @@ export class BlsCatalogService {
 
   get totalSeries(): number {
     return this.index.length;
+  }
+
+  get catalogLoadError(): string | undefined {
+    return this.loadError;
   }
 }
 
