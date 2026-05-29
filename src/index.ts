@@ -31,6 +31,7 @@ const dropTool = cfg.dataframeDropEnabled
     });
 
 await createApp({
+  landing: { requireAuth: false },
   tools: [
     blsListSurveysTool,
     blsSearchSeriesTool,

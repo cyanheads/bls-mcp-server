@@ -1,9 +1,17 @@
 {
   "manifest_version": "0.3",
   "name": "bls-labor-mcp-server",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Fetch US Bureau of Labor Statistics data — CPI, unemployment, wages, JOLTS, and more via MCP. STDIO or Streamable HTTP.",
-  "author": { "name": "cyanheads" },
+  "author": {
+    "name": "cyanheads"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cyanheads/bls-labor-mcp-server"
+  },
+  "homepage": "https://github.com/cyanheads/bls-labor-mcp-server#readme",
+  "license": "Apache-2.0",
   "server": {
     "type": "node",
     "entry_point": "dist/index.js",
@@ -19,7 +27,9 @@
     }
   },
   "compatibility": {
-    "runtimes": { "node": ">=24.0.0" }
+    "runtimes": {
+      "node": ">=24.0.0"
+    }
   },
   "tools_generated": true,
   "prompts_generated": true,
@@ -28,7 +38,8 @@
       "title": "BLS API Key",
       "type": "string",
       "description": "Optional — works without one (25 req/day). With key: 500 req/day + calculations and annual averages. Register free at bls.gov/developers.",
-      "required": false
+      "required": false,
+      "default": ""
     }
   }
 }

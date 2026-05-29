@@ -1,0 +1,10 @@
+{
+  "@cyanheads/bls-labor-mcp-server": {
+    "command": "npx",
+    "args": ["-y", "@cyanheads/bls-labor-mcp-server"],
+    "env": {
+      "MCP_TRANSPORT_TYPE": "stdio",
+      "BLS_API_KEY": ""
+    }
+  }
+}

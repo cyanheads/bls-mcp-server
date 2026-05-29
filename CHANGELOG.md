@@ -2,6 +2,10 @@
 
 All notable changes to this project. Each entry links to its full per-version file in [changelog/](changelog/).
 
+## [0.2.2](changelog/0.2.x/0.2.2.md) — 2026-05-28 · 🛡️ Security
+
+mcp-ts-core ^0.9.9 → ^0.9.13: HTTP body cap (413 guard), session-init gate, quieter 401/403/400/404 logging, GET /mcp keywords; dep refresh
+
 ## [0.2.1](changelog/0.2.x/0.2.1.md) — 2026-05-25
 
 Catalog load retries with linear backoff on cold-start failure; catalogLoadError surfaced in search error message.

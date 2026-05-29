@@ -1,10 +1,15 @@
 # bls-labor-mcp-server - Directory Structure
 
-Generated on: 2026-05-25 09:05:24
+Generated on: 2026-05-29 04:48:35
 
 ```text
 bls-labor-mcp-server/
 ├── .claude/
+├── .claude-plugin/
+│   └── plugin.json
+├── .codex-plugin/
+│   ├── mcp.json
+│   └── plugin.json
 ├── .github/
 │   └── ISSUE_TEMPLATE/
 │       ├── bug_report.yml
@@ -76,6 +81,8 @@ bls-labor-mcp-server/
 │   │   └── SKILL.md
 │   ├── api-workers/
 │   │   └── SKILL.md
+│   ├── code-simplifier/
+│   │   └── SKILL.md
 │   ├── design-mcp-server/
 │   │   └── SKILL.md
 │   ├── field-test/
@@ -83,8 +90,6 @@ bls-labor-mcp-server/
 │   ├── git-wrapup/
 │   │   └── SKILL.md
 │   ├── maintenance/
-│   │   └── SKILL.md
-│   ├── migrate-mcp-ts-template/
 │   │   └── SKILL.md
 │   ├── polish-docs-meta/
 │   │   ├── references/
