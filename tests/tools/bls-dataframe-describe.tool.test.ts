@@ -55,4 +55,58 @@ describe('blsDataframeDescribeTool', () => {
     expect(text).toContain('nullable');
     expect(text).toContain('series_id');
   });
+
+  it('formats truncated dataframe with max_rows annotation', () => {
+    const output = {
+      dataframes: [
+        {
+          name: 'df_AAAAA_BBBBB',
+          source_tool: 'bls_get_series',
+          query_params: { series_ids: ['LNS14000000'] },
+          created_at: '2026-05-21T10:00:00.000Z',
+          expires_at: '2026-05-22T10:00:00.000Z',
+          row_count: 5000,
+          truncated: true,
+          max_rows: 5000,
+          column_schema: [{ name: 'value', type: 'DOUBLE', nullable: true }],
+        },
+      ],
+    };
+    const blocks = blsDataframeDescribeTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('truncated');
+    expect(text).toContain('5000');
+  });
+
+  it('formats query_params as key=value pairs', () => {
+    const output = {
+      dataframes: [
+        {
+          name: 'df_AAAAA_BBBBB',
+          source_tool: 'bls_get_series',
+          query_params: { series_ids: ['LNS14000000'], start_year: 2020, calculations: true },
+          created_at: '2026-05-21T10:00:00.000Z',
+          expires_at: '2026-05-22T10:00:00.000Z',
+          row_count: 10,
+          truncated: false,
+          column_schema: [],
+        },
+      ],
+    };
+    const blocks = blsDataframeDescribeTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('series_ids');
+    expect(text).toContain('LNS14000000');
+  });
+
+  it('output schema validates empty dataframes array', () => {
+    const output = { dataframes: [] };
+    expect(() => blsDataframeDescribeTool.output.parse(output)).not.toThrow();
+  });
+
+  it('optional name field passes parse', () => {
+    // Zod schema should accept both with and without name
+    expect(() => blsDataframeDescribeTool.input.parse({})).not.toThrow();
+    expect(() => blsDataframeDescribeTool.input.parse({ name: 'df_AAAAA_BBBBB' })).not.toThrow();
+  });
 });

@@ -77,3 +77,86 @@ describe('blsListSurveysTool', () => {
     expect(text).toContain('net change');
   });
 });
+
+describe('blsListSurveysTool — additional coverage', () => {
+  // The module-level vi.mock above injects MOCK_SURVEYS (CE, CU, LN) for all calls.
+  // These tests rely on that mock being present.
+
+  it('returns empty list when no surveys match the category filter', async () => {
+    // MOCK_SURVEYS contains CE, CU, LN — none are in the time_use category (TU only)
+    const ctx = createMockContext();
+    const input = blsListSurveysTool.input.parse({ category: 'time_use' });
+    const result = await blsListSurveysTool.handler(input, ctx);
+
+    expect(result.surveys).toHaveLength(0);
+    expect(result.total).toBe(0);
+  });
+
+  it('sorts surveys alphabetically by abbreviation', async () => {
+    const ctx = createMockContext();
+    const input = blsListSurveysTool.input.parse({});
+    const result = await blsListSurveysTool.handler(input, ctx);
+
+    // Verify ascending alphabetical order
+    const abbrs = result.surveys.map((s) => s.abbreviation);
+    const sorted = [...abbrs].sort((a, b) => a.localeCompare(b));
+    expect(abbrs).toEqual(sorted);
+  });
+
+  it('formats output without capability caps for a survey with no capabilities', () => {
+    const output = {
+      surveys: [
+        {
+          abbreviation: 'JT',
+          name: 'JOLTS',
+          allowsNetChange: false,
+          allowsPercentChange: false,
+          hasAnnualAverages: false,
+        },
+      ],
+      total: 1,
+    };
+    const blocks = blsListSurveysTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('JT');
+    // No capability annotation should appear for a survey with no capabilities
+    expect(text).not.toContain('net change');
+    expect(text).not.toContain('% change');
+    expect(text).not.toContain('annual avg');
+  });
+
+  it('formats empty result with "No surveys matched" message', () => {
+    const output = { surveys: [], total: 0 };
+    const blocks = blsListSurveysTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('No surveys');
+  });
+
+  it('returns total equal to surveys array length', async () => {
+    const ctx = createMockContext();
+    const input = blsListSurveysTool.input.parse({});
+    const result = await blsListSurveysTool.handler(input, ctx);
+
+    expect(result.total).toBe(result.surveys.length);
+  });
+
+  it('formats output with all three capability flags', () => {
+    const output = {
+      surveys: [
+        {
+          abbreviation: 'CE',
+          name: 'Current Employment Statistics',
+          allowsNetChange: true,
+          allowsPercentChange: true,
+          hasAnnualAverages: true,
+        },
+      ],
+      total: 1,
+    };
+    const blocks = blsListSurveysTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('net change');
+    expect(text).toContain('% change');
+    expect(text).toContain('annual avg');
+  });
+});

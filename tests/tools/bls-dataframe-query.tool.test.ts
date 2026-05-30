@@ -115,4 +115,55 @@ describe('blsDataframeQueryTool', () => {
     const text = (blocks[0] as { text: string }).text;
     expect(text).toContain('df_CCCCC_DDDDD');
   });
+
+  it('rejects empty sql string', () => {
+    expect(() => blsDataframeQueryTool.input.parse({ sql: '' })).toThrow();
+  });
+
+  it('rejects row_limit below 1', () => {
+    expect(() => blsDataframeQueryTool.input.parse({ sql: 'SELECT 1', row_limit: 0 })).toThrow();
+  });
+
+  it('rejects row_limit above 10000', () => {
+    expect(() =>
+      blsDataframeQueryTool.input.parse({ sql: 'SELECT 1', row_limit: 10001 }),
+    ).toThrow();
+  });
+
+  it('rejects preview above 10000', () => {
+    expect(() => blsDataframeQueryTool.input.parse({ sql: 'SELECT 1', preview: 10001 })).toThrow();
+  });
+
+  it('formats rows with pipe-escaped cell values', () => {
+    const output = {
+      columns: ['label'],
+      row_count: 1,
+      rows: [{ label: 'a|b' }],
+    };
+    const blocks = blsDataframeQueryTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    // Pipe in cell value must be escaped
+    expect(text).toContain('a\\|b');
+  });
+
+  it('formats null cell values as empty string', () => {
+    const output = {
+      columns: ['value'],
+      row_count: 1,
+      rows: [{ value: null }],
+    };
+    const blocks = blsDataframeQueryTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    // null cell → empty table cell
+    expect(text).toContain('|  |');
+  });
+
+  // Security: SQL injection attempt via SQL input is passed through to the canvas bridge
+  // (the framework gate blocks it); verify it doesn't crash the tool input validation
+  it('accepts arbitrary SQL string without input validation error', () => {
+    const injectionSql =
+      'SELECT * FROM df_AAAAA; DROP TABLE df_BBBBB; SELECT * FROM information_schema.tables';
+    expect(() => blsDataframeQueryTool.input.parse({ sql: injectionSql })).not.toThrow();
+    // The actual denial happens in the canvas bridge / framework SQL gate, not the Zod schema
+  });
 });

@@ -4,7 +4,7 @@
  */
 
 import { createMockContext, getEnrichment } from '@cyanheads/mcp-ts-core/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { blsSearchSeriesTool } from '@/mcp-server/tools/definitions/bls-search-series.tool.js';
 
 const MOCK_SERIES = [
@@ -19,6 +19,8 @@ const MOCK_SERIES = [
 
 const mockSearch = vi.fn().mockReturnValue({ series: MOCK_SERIES, total: 1 });
 let mockIsLoaded = true;
+let mockTotalSeries = 847000;
+let mockCatalogLoadError: string | undefined;
 
 vi.mock('@/services/bls-catalog/bls-catalog-service.js', () => ({
   getBlsCatalogService: () => ({
@@ -26,7 +28,10 @@ vi.mock('@/services/bls-catalog/bls-catalog-service.js', () => ({
       return mockIsLoaded;
     },
     get totalSeries() {
-      return mockIsLoaded ? 847000 : 0;
+      return mockTotalSeries;
+    },
+    get catalogLoadError() {
+      return mockCatalogLoadError;
     },
     search: mockSearch,
   }),
@@ -95,5 +100,133 @@ describe('blsSearchSeriesTool', () => {
     const blocks = blsSearchSeriesTool.format!(output);
     const text = (blocks[0] as { text: string }).text;
     expect(text).toContain('No matching series');
+  });
+});
+
+describe('blsSearchSeriesTool — additional coverage', () => {
+  beforeEach(() => {
+    mockIsLoaded = true;
+    mockTotalSeries = 847000;
+    mockCatalogLoadError = undefined;
+    mockSearch.mockReturnValue({ series: MOCK_SERIES, total: 1 });
+  });
+
+  it('throws catalog_unavailable when catalog loaded but empty (totalSeries === 0)', () => {
+    mockIsLoaded = true;
+    mockTotalSeries = 0;
+    mockCatalogLoadError = 'All LABSTAT downloads returned empty.';
+
+    const ctx = createMockContext({ errors: blsSearchSeriesTool.errors });
+    const input = blsSearchSeriesTool.input.parse({ query: 'unemployment' });
+
+    expect(() => blsSearchSeriesTool.handler(input, ctx)).toThrow(
+      expect.objectContaining({ data: expect.objectContaining({ reason: 'catalog_unavailable' }) }),
+    );
+  });
+
+  it('enriches with filter-specific notice when no results and filters are active', () => {
+    mockSearch.mockReturnValueOnce({ series: [], total: 0 });
+    mockIsLoaded = true;
+
+    const ctx = createMockContext();
+    const input = blsSearchSeriesTool.input.parse({
+      query: 'nonfarm',
+      survey: 'CE',
+      seasonal_adjustment: true,
+    });
+    blsSearchSeriesTool.handler(input, ctx);
+
+    const enriched = getEnrichment(ctx);
+    expect(enriched.notice).toBeDefined();
+    // Filter-specific notice mentions removing filters
+    expect(enriched.notice).toContain('filter');
+  });
+
+  it('returns areaName and itemName when present in catalog entry', () => {
+    const seriesWithCodes = [
+      {
+        seriesId: 'CU0000SA0',
+        title: 'CPI-U All Items',
+        surveyAbbr: 'CU',
+        seasonal: true,
+        areaName: 'U.S. city average',
+        itemName: 'All items',
+      },
+    ];
+    mockSearch.mockReturnValueOnce({ series: seriesWithCodes, total: 1 });
+    mockIsLoaded = true;
+
+    const ctx = createMockContext();
+    const input = blsSearchSeriesTool.input.parse({ query: 'CPI all items' });
+    const result = blsSearchSeriesTool.handler(input, ctx);
+
+    expect(result.series[0]!.areaName).toBe('U.S. city average');
+    expect(result.series[0]!.itemName).toBe('All items');
+  });
+
+  it('omits areaName/itemName from output when absent in catalog entry', () => {
+    // Return a series with no areaName/itemName from the catalog
+    const seriesNoArea = [
+      {
+        seriesId: 'TEST_PLAIN_001',
+        title: 'Unemployment Rate',
+        surveyAbbr: 'LN',
+        seasonal: true,
+        // no areaName, no itemName
+      },
+    ];
+    mockSearch.mockReturnValueOnce({ series: seriesNoArea, total: 1 });
+    mockIsLoaded = true;
+
+    const ctx = createMockContext();
+    const input = blsSearchSeriesTool.input.parse({ query: 'unemployment' });
+    const result = blsSearchSeriesTool.handler(input, ctx);
+
+    expect('areaName' in (result.series[0] ?? {})).toBe(false);
+    expect('itemName' in (result.series[0] ?? {})).toBe(false);
+  });
+
+  it('rejects blank query string', () => {
+    expect(() => blsSearchSeriesTool.input.parse({ query: '   ' })).toThrow();
+  });
+
+  it('rejects empty query string', () => {
+    expect(() => blsSearchSeriesTool.input.parse({ query: '' })).toThrow();
+  });
+
+  it('rejects limit below 1', () => {
+    expect(() => blsSearchSeriesTool.input.parse({ query: 'test', limit: 0 })).toThrow();
+  });
+
+  it('rejects limit above 50', () => {
+    expect(() => blsSearchSeriesTool.input.parse({ query: 'test', limit: 51 })).toThrow();
+  });
+
+  it('formats output with itemName when present', () => {
+    const output = {
+      series: [
+        {
+          seriesId: 'CU0000SA0',
+          title: 'CPI-U All Items',
+          survey: 'CU',
+          seasonal: true,
+          itemName: 'All items',
+        },
+      ],
+    };
+    const blocks = blsSearchSeriesTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('All items');
+  });
+
+  // Security: oversized query should not crash the handler
+  it('handles very long query string without throwing', () => {
+    const longQuery = 'a'.repeat(500);
+    mockSearch.mockReturnValueOnce({ series: [], total: 0 });
+    mockIsLoaded = true;
+
+    const ctx = createMockContext();
+    const input = blsSearchSeriesTool.input.parse({ query: longQuery });
+    expect(() => blsSearchSeriesTool.handler(input, ctx)).not.toThrow();
   });
 });

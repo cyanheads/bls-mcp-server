@@ -131,4 +131,145 @@ describe('blsGetSeriesTool', () => {
     expect(text).toContain('df_AAAAA_BBBBB');
     expect(text).toContain('truncated');
   });
+
+  it('throws no_data_for_period when start_year > end_year', async () => {
+    const ctx = createMockContext({ errors: blsGetSeriesTool.errors });
+    const input = blsGetSeriesTool.input.parse({
+      series_ids: ['LNS14000000'],
+      start_year: 2024,
+      end_year: 2020,
+    });
+
+    await expect(blsGetSeriesTool.handler(input, ctx)).rejects.toMatchObject({
+      data: { reason: 'no_data_for_period' },
+    });
+  });
+
+  it('throws no_data_for_period when year range spans 20+ years', async () => {
+    const ctx = createMockContext({ errors: blsGetSeriesTool.errors });
+    const input = blsGetSeriesTool.input.parse({
+      series_ids: ['LNS14000000'],
+      start_year: 2000,
+      end_year: 2024, // 25-year range
+    });
+
+    await expect(blsGetSeriesTool.handler(input, ctx)).rejects.toMatchObject({
+      data: { reason: 'no_data_for_period' },
+    });
+  });
+
+  it('accepts exactly 19-year range without throwing validation error', async () => {
+    fetchSeriesMock.mockResolvedValue([MOCK_SERIES]);
+    const ctx = createMockContext();
+    const input = blsGetSeriesTool.input.parse({
+      series_ids: ['LNS14000000'],
+      start_year: 2005,
+      end_year: 2023, // 19-year range — within 20-year cap
+    });
+
+    await expect(blsGetSeriesTool.handler(input, ctx)).resolves.toBeDefined();
+  });
+
+  it('rejects empty series_ids array', () => {
+    expect(() => blsGetSeriesTool.input.parse({ series_ids: [] })).toThrow();
+  });
+
+  it('rejects series_ids array with more than 50 entries', () => {
+    const ids = Array.from({ length: 51 }, (_, i) => `LNS${String(i).padStart(8, '0')}`);
+    expect(() => blsGetSeriesTool.input.parse({ series_ids: ids })).toThrow();
+  });
+
+  it('passes quota_exceeded error from service through unchanged', async () => {
+    const { serviceUnavailable } = await import('@cyanheads/mcp-ts-core/errors');
+    fetchSeriesMock.mockRejectedValue(serviceUnavailable('quota', { reason: 'quota_exceeded' }));
+
+    const ctx = createMockContext({ errors: blsGetSeriesTool.errors });
+    const input = blsGetSeriesTool.input.parse({ series_ids: ['LNS14000000'] });
+
+    await expect(blsGetSeriesTool.handler(input, ctx)).rejects.toMatchObject({
+      data: { reason: 'quota_exceeded' },
+    });
+  });
+
+  it('formats observations with calculation columns when present', () => {
+    const output = {
+      series: [
+        {
+          seriesId: 'LNS14000000',
+          title: 'Unemployment Rate',
+          observationCount: 1,
+          observations: [
+            {
+              year: '2024',
+              period: 'M12',
+              periodName: 'December',
+              value: '4.1',
+              netChange1Month: '-0.1',
+              netChange12Month: '-0.3',
+              pctChange1Month: '-2.4',
+              pctChange12Month: '-6.8',
+            },
+          ],
+        },
+      ],
+      spilled: false as const,
+    };
+    const blocks = blsGetSeriesTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('Net 1M');
+    expect(text).toContain('-0.1');
+    expect(text).toContain('-0.3');
+  });
+
+  it('formats observations with footnotes', () => {
+    const output = {
+      series: [
+        {
+          seriesId: 'LNS14000000',
+          observationCount: 1,
+          observations: [
+            {
+              year: '2024',
+              period: 'M12',
+              value: '4.1',
+              footnotes: ['P: Preliminary'],
+            },
+          ],
+        },
+      ],
+      spilled: false as const,
+    };
+    const blocks = blsGetSeriesTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('Preliminary');
+  });
+
+  it('formats series with no observations with a helpful message', () => {
+    const output = {
+      series: [
+        {
+          seriesId: 'NODATA000',
+          observationCount: 0,
+          observations: [],
+        },
+      ],
+      spilled: false as const,
+    };
+    const blocks = blsGetSeriesTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('No observations');
+    expect(text).toContain('bls_search_series');
+  });
+
+  // Security: verify API key never appears in tool output
+  it('does not include API key or env values in output', async () => {
+    fetchSeriesMock.mockResolvedValue([MOCK_SERIES]);
+    const ctx = createMockContext();
+    const input = blsGetSeriesTool.input.parse({ series_ids: ['LNS14000000'] });
+    const result = await blsGetSeriesTool.handler(input, ctx);
+    const serialized = JSON.stringify(result);
+    // process.env.BLS_API_KEY is typically empty/undefined in tests — confirm no secret leakage pattern
+    expect(serialized).not.toMatch(/registrationkey/i);
+    expect(serialized).not.toMatch(/apikey/i);
+  });
 });

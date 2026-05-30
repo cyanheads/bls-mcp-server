@@ -34,4 +34,17 @@ describe('blsDataframeDropTool', () => {
     const text = (blocks[0] as { text: string }).text;
     expect(text).toContain('not found');
   });
+
+  it('rejects empty name', () => {
+    expect(() => blsDataframeDropTool.input.parse({ name: '' })).toThrow();
+  });
+
+  it('output schema validates correctly', () => {
+    expect(() =>
+      blsDataframeDropTool.output.parse({ name: 'df_AAAAA_BBBBB', dropped: true }),
+    ).not.toThrow();
+    expect(() =>
+      blsDataframeDropTool.output.parse({ name: 'df_AAAAA_BBBBB', dropped: false }),
+    ).not.toThrow();
+  });
 });

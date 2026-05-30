@@ -4,7 +4,7 @@
  */
 
 import { createMockContext, getEnrichment } from '@cyanheads/mcp-ts-core/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { blsGetLatestTool } from '@/mcp-server/tools/definitions/bls-get-latest.tool.js';
 import type { SeriesData } from '@/services/bls-api/types.js';
 
@@ -97,5 +97,125 @@ describe('blsGetLatestTool', () => {
     expect(text).toContain('4.1');
     expect(text).toContain('M12');
     expect(text).toContain('Item:');
+  });
+});
+
+describe('blsGetLatestTool — additional coverage', () => {
+  beforeEach(() => {
+    fetchLatestMock.mockReset();
+  });
+
+  it('rethrows quota_exceeded error (affects all series)', async () => {
+    const { serviceUnavailable } = await import('@cyanheads/mcp-ts-core/errors');
+    fetchLatestMock.mockRejectedValue(
+      serviceUnavailable('quota exceeded', { reason: 'quota_exceeded' }),
+    );
+
+    const ctx = createMockContext({ errors: blsGetLatestTool.errors });
+    const input = blsGetLatestTool.input.parse({ series_ids: ['LNS14000000'] });
+
+    await expect(blsGetLatestTool.handler(input, ctx)).rejects.toMatchObject({
+      data: { reason: 'quota_exceeded' },
+    });
+  });
+
+  it('rethrows series_locked error (affects all series)', async () => {
+    const { serviceUnavailable } = await import('@cyanheads/mcp-ts-core/errors');
+    fetchLatestMock.mockRejectedValue(serviceUnavailable('locked', { reason: 'series_locked' }));
+
+    const ctx = createMockContext({ errors: blsGetLatestTool.errors });
+    const input = blsGetLatestTool.input.parse({ series_ids: ['LNS14000000'] });
+
+    await expect(blsGetLatestTool.handler(input, ctx)).rejects.toMatchObject({
+      data: { reason: 'series_locked' },
+    });
+  });
+
+  it('handles mixed success and failure across multiple series', async () => {
+    fetchLatestMock
+      .mockResolvedValueOnce(MOCK_SERIES)
+      .mockRejectedValueOnce(new Error('series_not_found'));
+
+    const ctx = createMockContext();
+    const input = blsGetLatestTool.input.parse({
+      series_ids: ['LNS14000000', 'INVALID000'],
+    });
+    const result = await blsGetLatestTool.handler(input, ctx);
+
+    expect(result.succeeded).toBe(1);
+    expect(result.failed).toHaveLength(1);
+    expect(result.failed[0]!.seriesId).toBe('INVALID000');
+
+    const enriched = getEnrichment(ctx);
+    expect(enriched.notice).toBeDefined();
+    expect(enriched.notice).toContain('bls_search_series');
+  });
+
+  it('rejects empty series_ids array', () => {
+    expect(() => blsGetLatestTool.input.parse({ series_ids: [] })).toThrow();
+  });
+
+  it('rejects series_ids array with more than 50 entries', () => {
+    const ids = Array.from({ length: 51 }, (_, i) => `ID${i}`);
+    expect(() => blsGetLatestTool.input.parse({ series_ids: ids })).toThrow();
+  });
+
+  it('formats output with failed series listed', () => {
+    const output = {
+      results: [
+        { seriesId: 'LNS14000000' }, // succeeded but no latestObservation — format skips it
+        { seriesId: 'INVALID000' },
+      ],
+      succeeded: 0,
+      failed: [{ seriesId: 'INVALID000', error: 'series_not_found' }],
+    };
+    const blocks = blsGetLatestTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('failed');
+    expect(text).toContain('INVALID000');
+    expect(text).toContain('series_not_found');
+  });
+
+  it('formats output with footnotes when present', () => {
+    const output = {
+      results: [
+        {
+          seriesId: 'LNS14000000',
+          latestObservation: {
+            year: '2024',
+            period: 'M12',
+            value: '4.1',
+            footnotes: ['P: Preliminary'],
+          },
+        },
+      ],
+      succeeded: 1,
+      failed: [],
+    };
+    const blocks = blsGetLatestTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    expect(text).toContain('Preliminary');
+  });
+
+  it('formats output with periodName when present', () => {
+    const output = {
+      results: [
+        {
+          seriesId: 'LNS14000000',
+          latestObservation: {
+            year: '2024',
+            period: 'M12',
+            periodName: 'December',
+            value: '4.1',
+          },
+        },
+      ],
+      succeeded: 1,
+      failed: [],
+    };
+    const blocks = blsGetLatestTool.format!(output);
+    const text = (blocks[0] as { text: string }).text;
+    // With periodName, format should show "December 2024"
+    expect(text).toContain('December 2024');
   });
 });
