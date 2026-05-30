@@ -77,6 +77,15 @@ export const blsDataframeQueryTool = tool('bls_dataframe_query', {
       .describe('ISO 8601 expiry for the newly registered dataframe, when applicable.'),
   }),
 
+  enrichment: {
+    notice: z
+      .string()
+      .optional()
+      .describe(
+        'Guidance when results were capped by row_limit — e.g. to use register_as to persist all rows or increase row_limit. Absent when all rows fit in the response.',
+      ),
+  },
+
   async handler(input, ctx) {
     const bridge = getCanvasBridge();
     if (!bridge) {
@@ -98,6 +107,12 @@ export const blsDataframeQueryTool = tool('bls_dataframe_query', {
       returned: result.rows.length,
       registeredAs: meta?.tableName,
     });
+
+    if (result.rowCount > result.rows.length) {
+      ctx.enrich.notice(
+        `Query produced ${result.rowCount} rows but only ${result.rows.length} were returned (capped by row_limit=${input.row_limit}). Use register_as to persist all rows to canvas, or increase row_limit (max 10000).`,
+      );
+    }
 
     return {
       columns: result.columns,

@@ -166,6 +166,16 @@ export const blsGetSeriesTool = tool('bls_get_series', {
       .describe('True when results spilled to canvas due to inline budget overflow.'),
   }),
 
+  enrichment: {
+    totalObservations: z.number().describe('Total observation rows across all requested series.'),
+    notice: z
+      .string()
+      .optional()
+      .describe(
+        'Guidance for agents — e.g. when results spilled to canvas and SQL is needed for full access. Absent when all observations fit inline.',
+      ),
+  },
+
   async handler(input, ctx) {
     ctx.log.info('Executing bls_get_series', {
       count: input.series_ids.length,
@@ -210,6 +220,9 @@ export const blsGetSeriesTool = tool('bls_get_series', {
     const inlineJson = JSON.stringify(allRows);
     const shouldSpill = inlineJson.length > INLINE_BUDGET_CHARS;
 
+    const totalObservations = allRows.length;
+    ctx.enrich({ totalObservations });
+
     if (shouldSpill) {
       const bridge = getCanvasBridge();
 
@@ -238,6 +251,10 @@ export const blsGetSeriesTool = tool('bls_get_series', {
         },
       });
       const dataset = registered ? { ...toDatasetField(registered), truncated: false } : undefined;
+
+      ctx.enrich.notice(
+        `${totalObservations} total observations across ${allSeries.length} series exceeded the inline budget. Full data is in canvas table ${dataset?.name ?? '(unavailable)'}; use bls_dataframe_query for SQL access.`,
+      );
 
       // Still return preview rows inline — first 3 observations per series
       const seriesPreview = allSeries.map((s) => ({

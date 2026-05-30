@@ -77,13 +77,22 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
           .describe('A matching BLS series entry.'),
       )
       .describe('Matching series, ordered by relevance.'),
-    total: z.number().describe('Total matches in the catalog before the limit was applied.'),
+  }),
+
+  enrichment: {
+    totalFound: z.number().describe('Total matches in the catalog before the limit was applied.'),
     catalogSize: z
       .number()
       .describe(
-        'Total series in the loaded catalog index. Used to distinguish an empty-result search from a failed catalog load.',
+        'Total series in the loaded catalog index. Distinguishes an empty-result search from a failed catalog load.',
       ),
-  }),
+    notice: z
+      .string()
+      .optional()
+      .describe(
+        'Guidance when no results matched — e.g. how to broaden the query or remove filters. Absent when results are returned.',
+      ),
+  },
 
   handler(input, ctx) {
     ctx.log.info('Executing bls_search_series', {
@@ -117,6 +126,19 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
       limit: input.limit,
     });
 
+    ctx.enrich({ totalFound: result.total, catalogSize: service.totalSeries });
+    if (result.series.length === 0) {
+      const hasFilters =
+        input.survey !== undefined ||
+        input.area !== undefined ||
+        input.seasonal_adjustment !== undefined;
+      ctx.enrich.notice(
+        hasFilters
+          ? 'No matching series found. Try removing the survey/area/seasonal filter or broadening the query.'
+          : 'No matching series found. Try broadening the query, checking spelling, or using a BLS SeriesID directly.',
+      );
+    }
+
     return {
       series: result.series.map((s) => ({
         seriesId: s.seriesId,
@@ -126,23 +148,14 @@ export const blsSearchSeriesTool = tool('bls_search_series', {
         ...(s.itemName ? { itemName: s.itemName } : {}),
         seasonal: s.seasonal,
       })),
-      total: result.total,
-      catalogSize: service.totalSeries,
     };
   },
 
   format: (result) => {
     if (result.series.length === 0) {
-      return [
-        {
-          type: 'text',
-          text: `No matching series found (0 of ${result.catalogSize.toLocaleString()} series searched).\n\nTry broadening the query, removing the survey/area filter, or checking spelling.`,
-        },
-      ];
+      return [{ type: 'text', text: 'No matching series found.' }];
     }
-    const lines: string[] = [
-      `**${result.total} total matches** (showing ${result.series.length} of ${result.catalogSize.toLocaleString()} indexed series):\n`,
-    ];
+    const lines: string[] = [`**${result.series.length} series returned:**\n`];
     for (const s of result.series) {
       const parts: string[] = [`**${s.seriesId}**`];
       parts.push(`— ${s.title}`);

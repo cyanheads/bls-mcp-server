@@ -3,7 +3,7 @@
  * @module tests/tools/bls-get-series.tool.test
  */
 
-import { createMockContext } from '@cyanheads/mcp-ts-core/testing';
+import { createMockContext, getEnrichment } from '@cyanheads/mcp-ts-core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { blsGetSeriesTool } from '@/mcp-server/tools/definitions/bls-get-series.tool.js';
 import type { SeriesData } from '@/services/bls-api/types.js';
@@ -32,7 +32,7 @@ vi.mock('@/services/canvas-bridge/canvas-bridge.js', () => ({
 }));
 
 describe('blsGetSeriesTool', () => {
-  it('returns inline series data within budget', async () => {
+  it('returns inline series data within budget and enriches with total observations', async () => {
     fetchSeriesMock.mockResolvedValue([MOCK_SERIES]);
 
     const ctx = createMockContext();
@@ -44,6 +44,10 @@ describe('blsGetSeriesTool', () => {
     expect(result.series[0]!.seriesId).toBe('LNS14000000');
     expect(result.series[0]!.observations).toHaveLength(2);
     expect(result.series[0]!.observations[0]!.value).toBe('4.1');
+
+    const enriched = getEnrichment(ctx);
+    expect(enriched.totalObservations).toBe(2);
+    expect(enriched.notice).toBeUndefined();
   });
 
   it('throws on service error (quota_exceeded)', async () => {

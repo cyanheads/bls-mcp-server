@@ -93,6 +93,15 @@ export const blsGetLatestTool = tool('bls_get_latest', {
       .describe('Series that failed to fetch, with per-item error details.'),
   }),
 
+  enrichment: {
+    notice: z
+      .string()
+      .optional()
+      .describe(
+        'Guidance when one or more series failed — e.g. to use bls_search_series to verify SeriesIDs. Absent when all series returned data.',
+      ),
+  },
+
   async handler(input, ctx) {
     ctx.log.info('Executing bls_get_latest', { count: input.series_ids.length });
     const service = getBlsApiService();
@@ -164,6 +173,15 @@ export const blsGetLatestTool = tool('bls_get_latest', {
           ...(obs.footnotes?.length && { footnotes: obs.footnotes }),
         },
       });
+    }
+
+    if (failed.length > 0) {
+      const allFailed = succeeded.length === 0;
+      ctx.enrich.notice(
+        allFailed
+          ? `All ${failed.length} series failed. Use bls_search_series to verify the SeriesIDs are valid before retrying.`
+          : `${failed.length} of ${input.series_ids.length} series failed. Use bls_search_series to verify the failing SeriesIDs.`,
+      );
     }
 
     return {

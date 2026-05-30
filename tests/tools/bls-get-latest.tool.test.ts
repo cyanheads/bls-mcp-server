@@ -3,7 +3,7 @@
  * @module tests/tools/bls-get-latest.tool.test
  */
 
-import { createMockContext } from '@cyanheads/mcp-ts-core/testing';
+import { createMockContext, getEnrichment } from '@cyanheads/mcp-ts-core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { blsGetLatestTool } from '@/mcp-server/tools/definitions/bls-get-latest.tool.js';
 import type { SeriesData } from '@/services/bls-api/types.js';
@@ -24,7 +24,7 @@ vi.mock('@/services/bls-api/bls-api-service.js', () => ({
 }));
 
 describe('blsGetLatestTool', () => {
-  it('returns latest observations for valid series', async () => {
+  it('returns latest observations for valid series with no notice', async () => {
     fetchLatestMock.mockResolvedValue(MOCK_SERIES);
 
     const ctx = createMockContext();
@@ -35,9 +35,12 @@ describe('blsGetLatestTool', () => {
     expect(result.failed).toHaveLength(0);
     expect(result.results[0]!.seriesId).toBe('LNS14000000');
     expect(result.results[0]!.latestObservation?.value).toBe('4.1');
+
+    const enriched = getEnrichment(ctx);
+    expect(enriched.notice).toBeUndefined();
   });
 
-  it('records failed series when fetchLatest throws', async () => {
+  it('records failed series and enriches with notice', async () => {
     fetchLatestMock.mockRejectedValue(new Error('series_not_found'));
 
     const ctx = createMockContext();
@@ -48,6 +51,10 @@ describe('blsGetLatestTool', () => {
     expect(result.failed).toHaveLength(1);
     expect(result.failed[0]!.seriesId).toBe('INVALID000');
     expect(result.failed[0]!.error).toContain('series_not_found');
+
+    const enriched = getEnrichment(ctx);
+    expect(enriched.notice).toBeDefined();
+    expect(enriched.notice).toContain('bls_search_series');
   });
 
   it('handles sparse upstream payload — no observations goes to failed', async () => {
